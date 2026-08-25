@@ -9,6 +9,6 @@ export const merchantCredentials = pgTable('merchant_credentials', {
     .references(() => merchants.id, { onDelete: 'cascade' }),
   keyId: varchar('key_id', { length: 255 }).notNull(),
   encryptedKeySecret: varchar('encrypted_key_secret', { length: 512 }).notNull(),
-  webhookSecret: varchar('webhook_secret', { length: 255 }).notNull(),
+  encryptedWebhookSecret: varchar('encrypted_webhook_secret', { length: 512 }).notNull(),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 });

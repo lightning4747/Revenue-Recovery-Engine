@@ -25,6 +25,7 @@ CREATE TABLE "merchants" (
 	"id" varchar(64) PRIMARY KEY NOT NULL,
 	"business_name" varchar(255) NOT NULL,
 	"email" varchar(255) NOT NULL,
+	"password_hash" varchar(255) NOT NULL,
 	"currency" varchar(10) DEFAULT 'INR' NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -36,7 +37,7 @@ CREATE TABLE "merchant_credentials" (
 	"merchant_id" varchar(64) NOT NULL,
 	"key_id" varchar(255) NOT NULL,
 	"encrypted_key_secret" varchar(512) NOT NULL,
-	"webhook_secret" varchar(255) NOT NULL,
+	"encrypted_webhook_secret" varchar(512) NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "merchant_credentials_merchant_id_unique" UNIQUE("merchant_id")
 );

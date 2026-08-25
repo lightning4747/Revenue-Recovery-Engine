@@ -86,6 +86,7 @@ describe('DatabaseModule (Integration)', () => {
       id: merchantId,
       businessName: 'Test Merchant',
       email: `test_${Date.now()}@example.com`,
+      passwordHash: 'dummy_hash',
     });
 
     const opportunityId = `opp_${Date.now()}`;

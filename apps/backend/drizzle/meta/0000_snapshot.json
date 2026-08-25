@@ -1,5 +1,5 @@
 {
-  "id": "d1f8831a-412f-4450-93f2-41b2b0d6138d",
+  "id": "a9d63280-3f8b-4288-bdbe-ebbe44f9bd72",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -228,6 +228,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
         "currency": {
           "name": "currency",
           "type": "varchar(10)",
@@ -295,9 +301,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "webhook_secret": {
-          "name": "webhook_secret",
-          "type": "varchar(255)",
+        "encrypted_webhook_secret": {
+          "name": "encrypted_webhook_secret",
+          "type": "varchar(512)",
           "primaryKey": false,
           "notNull": true
         },
