@@ -90,7 +90,7 @@ Do **NOT** introduce or plan for:
 | Phase | Title | Objective & Summary | Prerequisites |
 | :--- | :--- | :--- | :--- |
 | **Phase 01** | `PHASE-01-foundation` | Establish NestJS project, `pnpm` configuration, environment validation, logger, exception filters, and Docker Compose baseline. | None |
-| **Phase 02** | `PHASE-02-database` | Configure TypeORM/PostgreSQL migrations, database schemas (`Merchant`, `WebhookEvent`, `RecoveryOpportunity`, `RecoveryPayment`, etc.), constraints, and integer minor-unit (paise) fields. | Phase 01 |
+| **Phase 02** | `PHASE-02-database` | Configure Drizzle ORM/PostgreSQL migrations, database schemas (`Merchant`, `WebhookEvent`, `RecoveryOpportunity`, `RecoveryPayment`, etc.), constraints, and integer minor-unit (paise) fields. | Phase 01 |
 | **Phase 03** | `PHASE-03-authentication` | Implement merchant onboarding, AES-256-GCM credential encryption, JWT session auth, and tenant isolation guards (`WHERE merchant_id = :merchantId`). | Phase 02 |
 | **Phase 04** | `PHASE-04-webhook-ingestion` | Implement NestJS raw body preservation (`rawBody: true`), constant-time HMAC SHA-256 validation (`crypto.timingSafeEqual`), duplicate check, and `WebhookEvent` persistence. | Phase 03 |
 | **Phase 05** | `PHASE-05-async-processing` | Implement Redis 7 `@nestjs/bullmq` integration, queue module, background job producer/worker, 3-attempt exponential retries, and worker idempotency checks. | Phase 04 |
