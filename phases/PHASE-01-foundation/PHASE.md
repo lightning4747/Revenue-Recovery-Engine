@@ -65,26 +65,31 @@ Setting up these foundational components before domain logic prevents architectu
 
 ## 6. Files / Modules / Components Affected
 ```text
-src/
-├── app.module.ts
-├── main.ts
-├── common/
-│   ├── config/
-│   │   └── env.validation.ts
-│   ├── filters/
-│   │   └── global-exception.filter.ts
-│   ├── interceptors/
-│   │   └── transform.interceptor.ts
-│   └── logger/
-│       └── app-logger.service.ts
-└── health/
-    ├── health.controller.ts
-    └── health.module.ts
+apps/backend/
+├── Dockerfile
+├── .env.example
+├── src/
+│   ├── app.module.ts
+│   ├── main.ts
+│   ├── common/
+│   │   ├── config/
+│   │   │   └── env.validation.ts
+│   │   ├── filters/
+│   │   │   └── global-exception.filter.ts
+│   │   ├── interceptors/
+│   │   │   └── transform.interceptor.ts
+│   │   └── logger/
+│   │       └── app-logger.service.ts
+│   └── health/
+│       ├── health.controller.ts
+│       └── health.module.ts
+└── test/
+    └── app.e2e-spec.ts
 
 docker-compose.yml
-Dockerfile
+pnpm-workspace.yaml
 pnpm-lock.yaml
-.env.example
+package.json
 ```
 
 ---

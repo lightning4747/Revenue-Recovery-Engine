@@ -79,7 +79,7 @@ Webhook ingestion is the primary event entry point for all incoming Razorpay pay
 
 ## 6. Files / Modules / Components Affected
 ```text
-src/
+apps/backend/src/
 ├── main.ts
 └── razorpay/
     └── webhooks/

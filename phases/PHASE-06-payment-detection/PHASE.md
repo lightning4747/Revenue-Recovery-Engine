@@ -61,7 +61,7 @@ Detection is the first domain stage in the RRE pipeline. It converts incoming Ra
 
 ## 6. Files / Modules / Components Affected
 ```text
-src/
+apps/backend/src/
 └── revenue/
     └── detection/
         ├── detection.module.ts

@@ -82,7 +82,7 @@ A core value proposition of RRE is intelligent failure diagnosis and financial q
 
 ## 6. Files / Modules / Components Affected
 ```text
-src/
+apps/backend/src/
 └── revenue/
     ├── diagnosis/
     │   ├── diagnosis.module.ts

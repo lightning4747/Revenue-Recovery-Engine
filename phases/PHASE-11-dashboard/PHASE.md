@@ -63,13 +63,13 @@ A merchant-facing Control Tower UI and immutable audit trail (FR-023 through FR-
 
 ## 6. Files / Modules / Components Affected
 ```text
-src/
+apps/backend/src/
 └── dashboard/
     ├── dashboard.module.ts
     ├── dashboard.controller.ts
     └── dashboard.service.ts
 
-frontend/
+apps/frontend/
 ├── index.html
 ├── src/
 │   ├── App.tsx

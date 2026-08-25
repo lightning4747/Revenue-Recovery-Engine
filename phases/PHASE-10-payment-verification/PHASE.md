@@ -115,7 +115,7 @@ Financial accuracy is governing requirement NFR-FC-001. RRE must never record re
 
 ## 6. Files / Modules / Components Affected
 ```text
-src/
+apps/backend/src/
 └── recovery/
     └── verification/
         ├── verification.module.ts

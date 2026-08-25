@@ -91,7 +91,7 @@ Executing failure detection, AI diagnosis, ERV calculation, policy evaluation, a
 
 ## 6. Files / Modules / Components Affected
 ```text
-src/
+apps/backend/src/
 ├── events/
 │   ├── events.module.ts
 │   ├── queues/

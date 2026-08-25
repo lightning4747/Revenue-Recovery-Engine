@@ -63,7 +63,7 @@ Isolating data access by `merchantId` and encrypting Razorpay API secrets at res
 
 ## 6. Files / Modules / Components Affected
 ```text
-src/
+apps/backend/src/
 ├── auth/
 │   ├── auth.module.ts
 │   ├── auth.controller.ts

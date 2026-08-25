@@ -78,8 +78,8 @@ Executing a dynamic Payment Link API call against Razorpay is the primary recove
 
 ## 6. Files / Modules / Components Affected
 ```text
-src/
-└── razorpay/
+apps/backend/src/
+├── razorpay/
     ├── client/
     │   └── razorpay-api-client.service.ts
     └── payment-links/

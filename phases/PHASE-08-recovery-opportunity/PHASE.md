@@ -75,7 +75,7 @@ Not all revenue opportunities should be acted upon immediately. Ranking opportun
 
 ## 6. Files / Modules / Components Affected
 ```text
-src/
+apps/backend/src/
 └── recovery/
     ├── prioritization/
     │   ├── prioritization.module.ts
