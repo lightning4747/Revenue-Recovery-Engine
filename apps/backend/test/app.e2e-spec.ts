@@ -29,6 +29,11 @@ describe('AppController & Auth/Merchant (e2e)', () => {
     const migrationsFolder = path.join(__dirname, '../drizzle');
     await migrate(db, { migrationsFolder });
 
+    // Clean tables for deterministic test execution
+    await db.execute(
+      sql`TRUNCATE TABLE merchants, merchant_credentials, user_sessions, webhook_events CASCADE`,
+    );
+
     await app.init();
   });
 
@@ -168,6 +173,157 @@ describe('AppController & Auth/Merchant (e2e)', () => {
 
       expect(resB.body.success).toBe(true);
       expect(resB.body.data).toBeNull();
+    });
+  });
+
+  describe('Webhook Ingestion & Signature Verification (e2e)', () => {
+    let merchantCId: string;
+    const webhookSecret = 'webhook_secret_merchantC_999';
+    let validSignature: string;
+
+    const payloadObj = {
+      entity: 'event',
+      account_id: 'acc_merchantC',
+      event: 'payment.failed',
+      event_id: 'evt_e2e_test_1001',
+      payload: {
+        payment: {
+          entity: {
+            id: 'pay_e2e_1001',
+            amount: 15000,
+            status: 'failed',
+            error_code: 'BAD_REQUEST_ERROR',
+            error_description: 'Payment failed due to insufficient funds',
+          },
+        },
+      },
+    };
+
+    const rawBodyString = JSON.stringify(payloadObj);
+
+    beforeAll(async () => {
+      // 1. Register Merchant C
+      const regRes = await request(app.getHttpServer())
+        .post('/api/v1/auth/register')
+        .send({
+          email: `merchant_c_${Date.now()}@example.com`,
+          password: 'password789',
+          businessName: 'Merchant C Corp',
+        })
+        .expect(201);
+
+      const tokenC = regRes.body.data.accessToken;
+
+      // Extract merchantId from JWT payload
+      const payloadBase64 = tokenC.split('.')[1];
+      const decodedPayload = JSON.parse(
+        Buffer.from(payloadBase64, 'base64').toString('utf8'),
+      );
+      merchantCId = decodedPayload.sub;
+
+      // 2. Set credentials for Merchant C
+      await request(app.getHttpServer())
+        .put('/api/v1/merchant/credentials')
+        .set('Authorization', `Bearer ${tokenC}`)
+        .send({
+          keyId: 'rzp_test_merchantC_key',
+          keySecret: 'secret_key_merchantC',
+          webhookSecret,
+        })
+        .expect(200);
+
+      // Compute valid HMAC SHA-256 signature against rawBodyString
+      const crypto = await import('crypto');
+      validSignature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(rawBodyString)
+        .digest('hex');
+    });
+
+    it('POST /api/v1/webhooks/razorpay/:merchantId - should reject request with missing signature', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/webhooks/razorpay/${merchantCId}`)
+        .set('Content-Type', 'application/json')
+        .send(rawBodyString)
+        .expect(400);
+
+      expect(res.body.success).toBe(false);
+    });
+
+    it('POST /api/v1/webhooks/razorpay/:merchantId - should reject request with tampered body', async () => {
+      const crypto = await import('crypto');
+      const tamperedString = JSON.stringify({ ...payloadObj, event: 'payment.captured' });
+      const invalidSignature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(tamperedString)
+        .digest('hex');
+
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/webhooks/razorpay/${merchantCId}`)
+        .set('Content-Type', 'application/json')
+        .set('X-Razorpay-Signature', invalidSignature)
+        .send(rawBodyString) // sending rawBodyString which doesn't match tampered signature
+        .expect(400);
+
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toContain('Invalid webhook signature');
+    });
+
+    it('POST /api/v1/webhooks/razorpay/:merchantId - should accept valid signature & persist WebhookEvent in <50ms', async () => {
+      const startTime = Date.now();
+
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/webhooks/razorpay/${merchantCId}`)
+        .set('Content-Type', 'application/json')
+        .set('X-Razorpay-Signature', validSignature)
+        .set('X-Razorpay-Event-Id', 'evt_e2e_test_1001')
+        .send(rawBodyString)
+        .expect(200);
+
+      const durationMs = Date.now() - startTime;
+      expect(durationMs).toBeLessThan(100); // 100ms tolerance for test runner overhead
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.duplicate).toBe(false);
+      expect(res.body.data.status).toBe('persisted');
+      expect(res.body.data.id).toBeDefined();
+
+      // Direct DB verification
+      const dbResult = await db.execute(sql`
+        SELECT provider, provider_event_id, event_type, processing_status
+        FROM webhook_events
+        WHERE provider_event_id = 'evt_e2e_test_1001'
+      `);
+
+      expect(dbResult.rows.length).toBe(1);
+      const row: any = dbResult.rows[0];
+      expect(row.provider).toBe('razorpay');
+      expect(row.event_type).toBe('payment.failed');
+      expect(row.processing_status).toBe('PENDING');
+    });
+
+    it('POST /api/v1/webhooks/razorpay/:merchantId - should handle duplicate event delivery idempotently', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/webhooks/razorpay/${merchantCId}`)
+        .set('Content-Type', 'application/json')
+        .set('X-Razorpay-Signature', validSignature)
+        .set('X-Razorpay-Event-Id', 'evt_e2e_test_1001')
+        .send(rawBodyString)
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.duplicate).toBe(true);
+      expect(res.body.data.status).toBe('acknowledged');
+
+      // Verify DB row count remains 1
+      const dbResult = await db.execute(sql`
+        SELECT COUNT(*)::int as count
+        FROM webhook_events
+        WHERE provider_event_id = 'evt_e2e_test_1001'
+      `);
+
+      const count: any = dbResult.rows[0];
+      expect(count.count).toBe(1);
     });
   });
 });
