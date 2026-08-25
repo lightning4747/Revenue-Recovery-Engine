@@ -487,13 +487,14 @@ The system shall record the reason for termination.
 
 After executing a recovery action, the system shall verify the resulting payment state using the available payment information.
 
-The system shall classify the outcome as:
+The system shall classify the outcome according to canonical revenue state machine enums (`IMPLEMENTATION_STRATEGY.md` Section 10):
 
-* Successfully recovered
-* Recovery failed
-* Pending
-* Partially recovered
-* Unable to verify
+* `RECOVERED` (Fully recovered payment confirmed)
+* `PARTIALLY_RECOVERED` (Partial payment confirmed, outstanding balance remains)
+* `FAILED` (Recovery attempt failed / retries exhausted)
+* `EXPIRED` (Recovery link expired or cancelled)
+* `UNRECOVERABLE` (Failure root cause classified as non-retryable)
+* `POLICY_BLOCKED` (Action blocked by merchant policy engine)
 
 The system shall not count an action as recovered revenue until successful payment is confirmed.
 

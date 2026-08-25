@@ -146,22 +146,24 @@ Repeated processing of the same recovery opportunity shall not result in uninten
 
 ## NFR-ID-002 — State Transition Idempotency
 
-Each opportunity transition shall be safe to retry.
+Each opportunity transition shall be safe to retry without corrupting the state machine.
 
 For example:
 
 ```text
-DETECTED
+OBSERVED
+    ↓
+AT_RISK
     ↓
 DIAGNOSED
     ↓
+VALUED
+    ↓
 PRIORITIZED
     ↓
-APPROVED
+ACTION_DISPATCHED
     ↓
-EXECUTED
-    ↓
-VERIFIED
+PARTIALLY_RECOVERED / RECOVERED
 ```
 
 Retrying a failed processing step shall not corrupt the opportunity state.
