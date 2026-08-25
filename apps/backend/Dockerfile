@@ -1,33 +1,35 @@
 # Stage 1: Build stage
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-COPY package.json pnpm-lock.yaml ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/backend/package.json ./apps/backend/
 RUN pnpm install --frozen-lockfile
 
-COPY tsconfig.json tsconfig.build.json nest-cli.json ./
-COPY src ./src
+COPY apps/backend/tsconfig.json apps/backend/tsconfig.build.json apps/backend/nest-cli.json ./apps/backend/
+COPY apps/backend/src ./apps/backend/src
 
-RUN pnpm run build
+RUN pnpm --filter backend build
 
 # Stage 2: Production runtime stage
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-COPY package.json pnpm-lock.yaml ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/backend/package.json ./apps/backend/
 RUN pnpm install --prod --frozen-lockfile
 
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
 
 ENV NODE_ENV=production
 ENV PORT=3000
 
 EXPOSE 3000
 
-CMD ["node", "dist/main"]
+CMD ["node", "apps/backend/dist/main"]
