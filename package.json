@@ -6,7 +6,8 @@
     "build": "pnpm --filter backend build",
     "start:dev": "pnpm --filter backend start:dev",
     "test": "pnpm --filter backend test",
-    "test:e2e": "pnpm --filter backend test:e2e"
+    "test:e2e": "pnpm --filter backend test:e2e",
+    "tunnel": "pnpm --filter backend tunnel"
   },
   "devDependencies": {
     "husky": "^9.1.7"
