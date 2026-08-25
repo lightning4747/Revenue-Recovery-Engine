@@ -48,6 +48,8 @@ services:
       RAZORPAY_KEY_SECRET: dummy_secret_key
       WEBHOOK_SECRET: dummy_webhook_secret
       JWT_SECRET: super_secret_jwt_key_minimum_32_chars
+      ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      JWT_EXPIRES_IN: 1d
     depends_on:
       postgres:
         condition: service_healthy
