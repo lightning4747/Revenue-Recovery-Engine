@@ -1,0 +1,1 @@
+pnpm --filter backend build && pnpm --filter backend test:e2e

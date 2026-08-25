@@ -2,9 +2,13 @@
   "name": "revenue-recovery-engine-monorepo",
   "private": true,
   "scripts": {
+    "prepare": "husky",
     "build": "pnpm --filter backend build",
     "start:dev": "pnpm --filter backend start:dev",
     "test": "pnpm --filter backend test",
     "test:e2e": "pnpm --filter backend test:e2e"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
   }
 }
