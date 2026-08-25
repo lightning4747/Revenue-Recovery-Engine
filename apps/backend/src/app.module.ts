@@ -6,6 +6,7 @@ import { envValidationSchema } from './common/config/env.validation';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 import { MerchantModule } from './merchant/merchant.module';
+import { WebhooksModule } from './razorpay/webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { MerchantModule } from './merchant/merchant.module';
     HealthModule,
     AuthModule,
     MerchantModule,
+    WebhooksModule,
   ],
 })
 export class AppModule {}
