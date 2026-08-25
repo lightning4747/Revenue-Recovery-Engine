@@ -11,4 +11,6 @@ export const envValidationSchema = Joi.object({
   RAZORPAY_KEY_SECRET: Joi.string().required(),
   WEBHOOK_SECRET: Joi.string().required(),
   JWT_SECRET: Joi.string().required(),
+  ENCRYPTION_KEY: Joi.string().min(32).required(),
+  JWT_EXPIRES_IN: Joi.string().default('1d'),
 });

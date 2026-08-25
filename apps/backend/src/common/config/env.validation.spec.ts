@@ -10,6 +10,7 @@ describe('envValidationSchema', () => {
     RAZORPAY_KEY_SECRET: 'secret_123',
     WEBHOOK_SECRET: 'whsec_123',
     JWT_SECRET: 'jwt_secret_key_32_characters_min',
+    ENCRYPTION_KEY: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
   };
 
   it('should validate complete valid environment configuration', () => {
