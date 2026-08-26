@@ -4,7 +4,7 @@ import * as https from 'https';
 import { URL } from 'url';
 
 // Helper to extract CLI flags (--key=value) or fallback to environment variables
-function getOption(flagName: string, envName: string, fallback: string): string {
+function getOption(flagName: string, envName: string, fallback?: string): string | undefined {
   const prefix = `--${flagName}=`;
   const found = process.argv.find((arg) => arg.startsWith(prefix));
   if (found) {
@@ -15,11 +15,65 @@ function getOption(flagName: string, envName: string, fallback: string): string 
 
 const port = process.env.PORT || '3000';
 const baseUrl = process.env.BASE_URL || `http://localhost:${port}`;
-const merchantId = getOption('merchantId', 'MERCHANT_ID', 'm_test_merchant_123');
-const webhookSecret = getOption('webhookSecret', 'WEBHOOK_SECRET', 'dummy_webhook_secret');
-const scenario = getOption('scenario', 'SCENARIO', 'valid');
-const eventId = getOption('eventId', 'EVENT_ID', `evt_local_${Date.now()}`);
-const eventType = getOption('eventType', 'EVENT_TYPE', 'payment.failed');
+const rawMerchantId = getOption('merchantId', 'MERCHANT_ID');
+const rawWebhookSecret = getOption('webhookSecret', 'WEBHOOK_SECRET');
+const scenario = (getOption('scenario', 'SCENARIO', 'valid') || 'valid').toLowerCase();
+const eventId = getOption('eventId', 'EVENT_ID', `evt_local_${Date.now()}`)!;
+const eventType = getOption('eventType', 'EVENT_TYPE', 'payment.failed')!;
+
+// Helper to make generic HTTP requests
+function sendHttpRequest(
+  targetUrl: string,
+  method: string,
+  body?: string,
+  extraHeaders: Record<string, string> = {},
+): Promise<{ statusCode: number; headers: http.IncomingHttpHeaders; body: string }> {
+  return new Promise((resolve, reject) => {
+    const parsedUrl = new URL(targetUrl);
+    const transport = parsedUrl.protocol === 'https:' ? https : http;
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...extraHeaders,
+    };
+
+    if (body) {
+      headers['Content-Length'] = Buffer.byteLength(body, 'utf8').toString();
+    }
+
+    const requestOptions: http.RequestOptions = {
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+      path: parsedUrl.pathname + parsedUrl.search,
+      method: method.toUpperCase(),
+      headers,
+    };
+
+    const req = transport.request(requestOptions, (res) => {
+      let responseData = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk) => {
+        responseData += chunk;
+      });
+      res.on('end', () => {
+        resolve({
+          statusCode: res.statusCode || 500,
+          headers: res.headers,
+          body: responseData,
+        });
+      });
+    });
+
+    req.on('error', (err) => {
+      reject(err);
+    });
+
+    if (body) {
+      req.write(body, 'utf8');
+    }
+    req.end();
+  });
+}
 
 // Generate realistic Razorpay payment.failed payload
 function buildPayload(evId: string, evType: string): string {
@@ -61,62 +115,101 @@ function buildPayload(evId: string, evType: string): string {
   return JSON.stringify(payloadObj, null, 2);
 }
 
-// Sends an HTTP POST request to the local webhook controller
-function sendWebhookRequest(
-  targetUrl: string,
-  rawBody: string,
-  signature: string,
-  evIdHeader: string,
-): Promise<{ statusCode: number; headers: http.IncomingHttpHeaders; body: string }> {
-  return new Promise((resolve, reject) => {
-    const parsedUrl = new URL(targetUrl);
-    const transport = parsedUrl.protocol === 'https:' ? https : http;
-
-    const requestOptions: http.RequestOptions = {
-      hostname: parsedUrl.hostname,
-      port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
-      path: parsedUrl.pathname + parsedUrl.search,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(rawBody, 'utf8'),
-        'X-Razorpay-Signature': signature,
-        'X-Razorpay-Event-Id': evIdHeader,
-      },
+// Ensures a valid test merchant exists with configured webhook credentials if none provided
+async function resolveMerchantAndSecret(): Promise<{ merchantId: string; webhookSecret: string }> {
+  // If merchantId was explicitly provided via CLI/ENV, use explicit values
+  if (rawMerchantId) {
+    return {
+      merchantId: rawMerchantId,
+      webhookSecret: rawWebhookSecret || 'dummy_webhook_secret',
     };
+  }
 
-    const req = transport.request(requestOptions, (res) => {
-      let responseData = '';
-      res.setEncoding('utf8');
-      res.on('data', (chunk) => {
-        responseData += chunk;
-      });
-      res.on('end', () => {
-        resolve({
-          statusCode: res.statusCode || 500,
-          headers: res.headers,
-          body: responseData,
-        });
-      });
-    });
+  // Zero-config developer auto-setup: ensure dev test merchant exists in DB
+  const cleanBase = baseUrl.replace(/\/$/, '');
+  const devEmail = 'dev_script_user@rre.local';
+  const devPassword = 'password123';
+  const devSecret = rawWebhookSecret || 'dummy_webhook_secret';
 
-    req.on('error', (err) => {
-      reject(err);
-    });
+  try {
+    let accessToken: string | undefined;
 
-    req.write(rawBody, 'utf8');
-    req.end();
-  });
+    // Try register first
+    const regRes = await sendHttpRequest(
+      `${cleanBase}/api/v1/auth/register`,
+      'POST',
+      JSON.stringify({
+        email: devEmail,
+        password: devPassword,
+        businessName: 'Local Script Test Merchant',
+      }),
+    );
+
+    if (regRes.statusCode === 201) {
+      const parsed = JSON.parse(regRes.body);
+      accessToken = parsed?.data?.accessToken;
+    } else if (regRes.statusCode === 409) {
+      // Already exists, log in
+      const loginRes = await sendHttpRequest(
+        `${cleanBase}/api/v1/auth/login`,
+        'POST',
+        JSON.stringify({
+          email: devEmail,
+          password: devPassword,
+        }),
+      );
+      if (loginRes.statusCode === 200) {
+        const parsed = JSON.parse(loginRes.body);
+        accessToken = parsed?.data?.accessToken;
+      }
+    }
+
+    if (accessToken) {
+      // Decode sub from JWT payload
+      const parts = accessToken.split('.');
+      if (parts.length === 3) {
+        const decoded = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+        const autoMerchantId = decoded.sub;
+
+        // Upsert merchant credentials
+        await sendHttpRequest(
+          `${cleanBase}/api/v1/merchant/credentials`,
+          'PUT',
+          JSON.stringify({
+            keyId: 'rzp_test_script_key',
+            keySecret: 'dummy_key_secret',
+            webhookSecret: devSecret,
+          }),
+          { Authorization: `Bearer ${accessToken}` },
+        );
+
+        return {
+          merchantId: autoMerchantId,
+          webhookSecret: devSecret,
+        };
+      }
+    }
+  } catch {
+    // If backend connection fails or auto-setup fails, fallback to default ID
+  }
+
+  return {
+    merchantId: 'm_test_merchant_123',
+    webhookSecret: devSecret,
+  };
 }
 
 // Main execution function
 async function runTestScenario() {
-  const targetEndpoint = `${baseUrl.replace(/\/$/, '')}/api/v1/webhooks/razorpay/${merchantId}`;
-
   console.log('\n==========================================================================');
   console.log('  REVENUE RECOVERY ENGINE — LOCAL WEBHOOK TEST SCRIPT');
   console.log('==========================================================================');
   console.log(`  Scenario:       ${scenario.toUpperCase()}`);
+  console.log(`  Base URL:       ${baseUrl}`);
+
+  const { merchantId, webhookSecret } = await resolveMerchantAndSecret();
+  const targetEndpoint = `${baseUrl.replace(/\/$/, '')}/api/v1/webhooks/razorpay/${merchantId}`;
+
   console.log(`  Target URL:     ${targetEndpoint}`);
   console.log(`  Merchant ID:    ${merchantId}`);
   console.log(`  Webhook Secret: ${webhookSecret}`);
@@ -126,9 +219,9 @@ async function runTestScenario() {
 
   let rawBody: string;
   let signatureSecret: string;
-  let effectiveEventId = eventId;
+  const effectiveEventId = eventId;
 
-  switch (scenario.toLowerCase()) {
+  switch (scenario) {
     case 'invalid-signature': {
       rawBody = buildPayload(effectiveEventId, eventType);
       signatureSecret = 'invalid_wrong_secret_key_999';
@@ -158,7 +251,15 @@ async function runTestScenario() {
       console.log(`  X-Razorpay-Event-Id:   ${effectiveEventId}`);
 
       try {
-        const res1 = await sendWebhookRequest(targetEndpoint, rawBody, signature1, effectiveEventId);
+        const res1 = await sendHttpRequest(
+          targetEndpoint,
+          'POST',
+          rawBody,
+          {
+            'X-Razorpay-Signature': signature1,
+            'X-Razorpay-Event-Id': effectiveEventId,
+          },
+        );
         console.log(`\n[RESPONSE #1] HTTP ${res1.statusCode}`);
         console.log(`  Body: ${res1.body}\n`);
       } catch (err: any) {
@@ -192,7 +293,15 @@ async function runTestScenario() {
   console.log(`  Raw Body Payload Preview:\n${rawBody.substring(0, 300)}...\n`);
 
   try {
-    const res = await sendWebhookRequest(targetEndpoint, rawBody, signature, effectiveEventId);
+    const res = await sendHttpRequest(
+      targetEndpoint,
+      'POST',
+      rawBody,
+      {
+        'X-Razorpay-Signature': signature,
+        'X-Razorpay-Event-Id': effectiveEventId,
+      },
+    );
 
     console.log('==========================================================================');
     console.log(`  HTTP RESPONSE STATUS: ${res.statusCode}`);
