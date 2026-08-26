@@ -4,6 +4,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { AuthModule } from './auth/auth.module';
 import { envValidationSchema } from './common/config/env.validation';
 import { DatabaseModule } from './database/database.module';
+import { EventsModule } from './events/events.module';
 import { HealthModule } from './health/health.module';
 import { MerchantModule } from './merchant/merchant.module';
 import { WebhooksModule } from './razorpay/webhooks/webhooks.module';
@@ -27,6 +28,7 @@ import { WebhooksModule } from './razorpay/webhooks/webhooks.module';
     AuthModule,
     MerchantModule,
     WebhooksModule,
+    EventsModule,
   ],
 })
 export class AppModule {}

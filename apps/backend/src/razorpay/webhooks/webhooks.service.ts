@@ -1,4 +1,7 @@
+import { InjectQueue } from '@nestjs/bullmq';
 import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Queue } from 'bullmq';
 import { eq, and } from 'drizzle-orm';
 import { CryptoService } from '../../auth/crypto/crypto.service';
 import { DRIZZLE_DB, DrizzleDb } from '../../database/database.provider';
@@ -19,6 +22,8 @@ export class WebhooksService {
     @Inject(DRIZZLE_DB) private readonly db: DrizzleDb,
     private readonly cryptoService: CryptoService,
     private readonly verificationService: WebhookVerificationService,
+    @InjectQueue('webhookQueue') private readonly webhookQueue?: Queue,
+    private readonly configService?: ConfigService,
   ) {}
 
   async handleWebhook(
@@ -151,14 +156,47 @@ export class WebhooksService {
         })
         .returning({ id: schema.webhookEvents.id });
 
+      const eventId = inserted[0]?.id;
+
       this.logger.log(
-        `WEBHOOK_PERSISTED: Successfully saved event ${providerEventId} (${eventType}) with ID ${inserted[0]?.id}`,
+        `WEBHOOK_PERSISTED: Successfully saved event ${providerEventId} (${eventType}) with ID ${eventId}`,
       );
+
+      // 7. Enqueue BullMQ Background Processing Job with Graceful Error Handling
+      if (eventId && this.webhookQueue) {
+        try {
+          const maxRetries = Number(
+            this.configService?.get('JOB_MAX_RETRIES') || 3,
+          );
+          const initialDelayMs = Number(
+            this.configService?.get('JOB_BACKOFF_INITIAL_DELAY_MS') || 5000,
+          );
+
+          await this.webhookQueue.add(
+            'process-event',
+            { eventId },
+            {
+              attempts: maxRetries,
+              backoff: {
+                type: 'exponential',
+                delay: initialDelayMs,
+              },
+            },
+          );
+          this.logger.log(
+            `BULLMQ_JOB_ENQUEUED: Successfully queued job for event ${eventId}`,
+          );
+        } catch (enqueueError: any) {
+          this.logger.error(
+            `REDIS_ENQUEUE_FAILED: Failed to enqueue BullMQ job for event ${eventId}: ${enqueueError?.message}. Event remains safely persisted in PostgreSQL with status PENDING.`,
+          );
+        }
+      }
 
       return {
         status: 'persisted',
         duplicate: false,
-        id: inserted[0]?.id,
+        id: eventId,
       };
     } catch (error: any) {
       // Postgres unique constraint violation code '23505'

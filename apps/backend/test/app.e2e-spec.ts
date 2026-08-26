@@ -299,7 +299,7 @@ describe('AppController & Auth/Merchant (e2e)', () => {
       const row: any = dbResult.rows[0];
       expect(row.provider).toBe('razorpay');
       expect(row.event_type).toBe('payment.failed');
-      expect(row.processing_status).toBe('PENDING');
+      expect(['PENDING', 'PROCESSING', 'PROCESSED']).toContain(row.processing_status);
     });
 
     it('POST /api/v1/webhooks/razorpay/:merchantId - should handle duplicate event delivery idempotently', async () => {
@@ -324,6 +324,48 @@ describe('AppController & Auth/Merchant (e2e)', () => {
 
       const count: any = dbResult.rows[0];
       expect(count.count).toBe(1);
+    });
+
+    it('Asynchronous BullMQ Worker - should process enqueued event and update processing_status to PROCESSED', async () => {
+      const asyncPayload = {
+        ...payloadObj,
+        event_id: 'evt_e2e_async_2001',
+      };
+      const asyncBodyString = JSON.stringify(asyncPayload);
+      const crypto = await import('crypto');
+      const asyncSignature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(asyncBodyString)
+        .digest('hex');
+
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/webhooks/razorpay/${merchantCId}`)
+        .set('Content-Type', 'application/json')
+        .set('X-Razorpay-Signature', asyncSignature)
+        .set('X-Razorpay-Event-Id', 'evt_e2e_async_2001')
+        .send(asyncBodyString)
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.status).toBe('persisted');
+
+      // Poll DB briefly for async worker processing completion
+      let processed = false;
+      for (let i = 0; i < 20; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+        const dbResult = await db.execute(sql`
+          SELECT processing_status, processed_at
+          FROM webhook_events
+          WHERE provider_event_id = 'evt_e2e_async_2001'
+        `);
+        if (dbResult.rows.length > 0 && dbResult.rows[0].processing_status === 'PROCESSED') {
+          processed = true;
+          expect(dbResult.rows[0].processed_at).not.toBeNull();
+          break;
+        }
+      }
+
+      expect(processed).toBe(true);
     });
   });
 });

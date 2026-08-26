@@ -1,4 +1,6 @@
+import { getQueueToken } from '@nestjs/bullmq';
 import { BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as crypto from 'crypto';
 import { CryptoService } from '../../auth/crypto/crypto.service';
@@ -11,6 +13,7 @@ describe('WebhooksService', () => {
   let mockDb: any;
   let mockCryptoService: any;
   let mockVerificationService: any;
+  let mockWebhookQueue: any;
 
   const merchantId = 'mer_test_123';
   const webhookSecret = 'test_webhook_secret_key';
@@ -51,12 +54,26 @@ describe('WebhooksService', () => {
       verifySignature: jest.fn(),
     };
 
+    mockWebhookQueue = {
+      add: jest.fn().mockResolvedValue({ id: 'job_1' }),
+    };
+
+    const mockConfigService = {
+      get: jest.fn().mockImplementation((key: string) => {
+        if (key === 'JOB_MAX_RETRIES') return 3;
+        if (key === 'JOB_BACKOFF_INITIAL_DELAY_MS') return 5000;
+        return undefined;
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WebhooksService,
         { provide: DRIZZLE_DB, useValue: mockDb },
         { provide: CryptoService, useValue: mockCryptoService },
         { provide: WebhookVerificationService, useValue: mockVerificationService },
+        { provide: getQueueToken('webhookQueue'), useValue: mockWebhookQueue },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
@@ -235,6 +252,44 @@ describe('WebhooksService', () => {
     expect(result).toEqual({
       status: 'acknowledged',
       duplicate: true,
+    });
+  });
+
+  it('should catch Redis queue enqueue errors gracefully and still return persisted status', async () => {
+    const selectWhereChain = jest
+      .fn()
+      .mockResolvedValueOnce([{ encryptedWebhookSecret: encryptedSecret }])
+      .mockResolvedValueOnce([]);
+
+    mockDb.select.mockReturnValue({
+      from: jest.fn().mockReturnValue({
+        where: selectWhereChain,
+      }),
+    });
+
+    mockCryptoService.decrypt.mockReturnValue(webhookSecret);
+    mockVerificationService.verifySignature.mockReturnValue(true);
+
+    const mockInsertedId = '550e8400-e29b-41d4-a716-446655440099';
+    mockDb.insert.mockReturnValue({
+      values: jest.fn().mockReturnValue({
+        returning: jest.fn().mockResolvedValue([{ id: mockInsertedId }]),
+      }),
+    });
+
+    mockWebhookQueue.add.mockRejectedValueOnce(new Error('Redis connection timeout'));
+
+    const result = await service.handleWebhook(
+      merchantId,
+      rawBody,
+      validSignature,
+      'evt_header_error_test',
+    );
+
+    expect(result).toEqual({
+      status: 'persisted',
+      duplicate: false,
+      id: mockInsertedId,
     });
   });
 });
