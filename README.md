@@ -19,35 +19,39 @@ Monorepo workspace managed via `pnpm`:
 │           └── razorpay/    # Webhook ingestion engine & HMAC verification
 ├── docs/                    # Project specifications & architecture docs
 │   └── LOCAL_WEBHOOK_INGRESS.md # Local zrok webhook ingress developer guide
-├── docker-compose.yml       # Local PostgreSQL 15 & Redis 7 services
+├── docker-compose.yml       # Local PostgreSQL 15, Redis 7 & Backend services
 └── package.json
 ```
 
-## Quick Start & Development Commands
+## Quick Start & Development Workflows
 
-### 1. Install Dependencies
+### Option A: Full Docker Compose Environment (All Services)
+Runs PostgreSQL, Redis, and Backend inside Docker containers:
 ```bash
-pnpm install
-```
+# 1. Start all Docker containers (PostgreSQL, Redis, Backend on port 3000)
+docker compose up -d
 
-### 2. Start PostgreSQL Infrastructure
-```bash
-docker compose up -d rre-postgres
-```
-
-### 3. Start Backend Application (Dev Mode)
-```bash
-pnpm start:dev
-```
-
-### 4. Local Webhook Ingress (zrok)
-To receive test webhooks from Razorpay on `localhost` during development:
-```bash
+# 2. Start zrok local webhook tunnel (Do NOT run pnpm start:dev when container is running)
 pnpm tunnel
 ```
+
+### Option B: Local Host Development Mode (With Live Reloading)
+Runs PostgreSQL & Redis in Docker, and NestJS locally on host for active development:
+```bash
+# 1. Start Database & Redis containers only
+docker compose up -d postgres redis
+
+# 2. Start Backend locally with watch mode
+pnpm start:dev
+
+# 3. In a second terminal, start zrok local webhook tunnel
+pnpm tunnel
+```
+
 For complete step-by-step setup instructions, refer to **[`docs/LOCAL_WEBHOOK_INGRESS.md`](docs/LOCAL_WEBHOOK_INGRESS.md)**.
 
-### 5. Run Test Suites
+## Test Suites
+
 ```bash
 # Unit Tests
 pnpm test
