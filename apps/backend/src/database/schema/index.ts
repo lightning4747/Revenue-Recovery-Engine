@@ -7,3 +7,4 @@ export * from './recovery-payments.schema';
 export * from './payment-telemetry.schema';
 export * from './bank-performance-baselines.schema';
 export * from './audit-events.schema';
+export * from './merchant-policies.schema';
