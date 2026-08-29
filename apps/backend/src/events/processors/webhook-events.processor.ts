@@ -6,6 +6,8 @@ import { DRIZZLE_DB, DrizzleDb } from '../../database/database.provider';
 import * as schema from '../../database/schema';
 import { DetectionService } from '../../revenue/detection/detection.service';
 
+import { OutcomeVerificationService } from '../../recovery/verification/outcome-verification.service';
+
 export interface WebhookJobData {
   eventId: string;
   merchantId?: string;
@@ -19,6 +21,7 @@ export class WebhookEventsProcessor extends WorkerHost {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: DrizzleDb,
     @Optional() private readonly detectionService?: DetectionService,
+    @Optional() private readonly outcomeVerificationService?: OutcomeVerificationService,
   ) {
     super();
   }
@@ -42,6 +45,7 @@ export class WebhookEventsProcessor extends WorkerHost {
     }
 
     const event = events[0];
+    const merchantId = job.data?.merchantId || (event as any).merchantId || '';
 
     // 2. Layer 2 Worker Idempotency Check: if already PROCESSED, skip execution
     if (event.processingStatus === 'PROCESSED') {
@@ -58,15 +62,23 @@ export class WebhookEventsProcessor extends WorkerHost {
       .where(eq(schema.webhookEvents.id, eventId));
 
     try {
-      // 4. Domain Processing Pipeline (Phase 06 Failure & Degradation Detection Engine)
+      // 4. Domain Processing Pipeline
       this.logger.log(
         `WORKER_PROCESSING_EVENT: Processing event ${eventId} (${event.eventType})`,
       );
 
-      if (this.detectionService) {
+      if (event.eventType.startsWith('payment_link.')) {
+        if (this.outcomeVerificationService) {
+          await this.outcomeVerificationService.processPaymentLinkEvent(
+            merchantId,
+            event.eventType,
+            event.payload as Record<string, any>,
+          );
+        }
+      } else if (this.detectionService) {
         await this.detectionService.processEvent({
           id: event.id,
-          merchantId: job.data?.merchantId || (event as any).merchantId || '',
+          merchantId,
           providerEventId: event.providerEventId,
           eventType: event.eventType,
           payload: event.payload as Record<string, any>,

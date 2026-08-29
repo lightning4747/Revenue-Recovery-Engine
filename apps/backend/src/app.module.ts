@@ -17,6 +17,7 @@ import { PrioritizationModule } from './recovery/prioritization/prioritization.m
 import { PolicyModule } from './recovery/policy/policy.module';
 
 import { PaymentLinksModule } from './razorpay/payment-links/payment-links.module';
+import { VerificationModule } from './recovery/verification/verification.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { PaymentLinksModule } from './razorpay/payment-links/payment-links.modul
     PrioritizationModule,
     PolicyModule,
     PaymentLinksModule,
+    VerificationModule,
   ],
 })
 export class AppModule {}

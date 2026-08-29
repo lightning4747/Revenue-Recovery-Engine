@@ -6,10 +6,13 @@ import { DatabaseModule } from '../database/database.module';
 import { DetectionModule } from '../revenue/detection/detection.module';
 import { WebhookEventsProcessor } from './processors/webhook-events.processor';
 
+import { VerificationModule } from '../recovery/verification/verification.module';
+
 @Module({
   imports: [
     DatabaseModule,
     DetectionModule,
+    VerificationModule,
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
