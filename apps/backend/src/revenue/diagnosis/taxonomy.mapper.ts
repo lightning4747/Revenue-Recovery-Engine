@@ -17,9 +17,9 @@ export class TaxonomyMapper {
     step?: string,
     reason?: string,
   ): DiagnosisTaxonomy {
-    const src = (source || '').toLowerCase();
-    const stp = (step || '').toLowerCase();
-    const rsn = (reason || '').toLowerCase();
+    const src = (source || '').toLowerCase().replace(/ /g, '_');
+    const stp = (step || '').toLowerCase().replace(/ /g, '_');
+    const rsn = (reason || '').toLowerCase().replace(/ /g, '_');
 
     // 1. Unrecoverable / Invalid Payment Instruments
     if (
@@ -65,29 +65,29 @@ export class TaxonomyMapper {
       };
     }
 
-    // 4. Bank Gateway Outages / Technical Errors
-    if (
-      src === 'bank' ||
-      rsn.includes('payment_failed') ||
-      rsn.includes('gateway_error') ||
-      rsn.includes('system_error') ||
-      stp.includes('issuer_bank')
-    ) {
-      return {
-        cause: 'BANK_TECHNICAL_OUTAGE',
-        recoverabilityClass: 'BANK_GATEWAY_FAILURE',
-        recoveryProbability: 0.7,
-        causeConfidence: 0.85,
-      };
-    }
-
-    // 5. Network / Transport Timeouts
+    // 4. Network / Transport Timeouts
     if (rsn.includes('timeout') || rsn.includes('network_error')) {
       return {
         cause: 'NETWORK_TIMEOUT',
         recoverabilityClass: 'TEMPORARY',
         recoveryProbability: 0.65,
         causeConfidence: 0.8,
+      };
+    }
+
+    // 5. Bank Gateway Outages / Technical Errors
+    if (
+      src === 'bank' ||
+      rsn.includes('gateway_error') ||
+      rsn.includes('system_error') ||
+      stp.includes('issuer_bank') ||
+      rsn.includes('bank_technical_error')
+    ) {
+      return {
+        cause: 'BANK_TECHNICAL_OUTAGE',
+        recoverabilityClass: 'BANK_GATEWAY_FAILURE',
+        recoveryProbability: 0.7,
+        causeConfidence: 0.85,
       };
     }
 

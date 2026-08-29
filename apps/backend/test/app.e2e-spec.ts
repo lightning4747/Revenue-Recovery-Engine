@@ -403,23 +403,27 @@ describe('AppController & Auth/Merchant (e2e)', () => {
         .send(failBodyString)
         .expect(200);
 
-      // Poll DB for RecoveryOpportunity creation
+      // Poll DB for RecoveryOpportunity diagnosis and valuation completion
       let oppFound = false;
       for (let i = 0; i < 20; i++) {
         await new Promise((r) => setTimeout(r, 100));
         const dbResult = await db.execute(sql`
-          SELECT source_type, status, amount, remaining_amount
+          SELECT source_type, status, cause, recovery_probability, expected_recovery_value, amount, remaining_amount
           FROM recovery_opportunities
           WHERE merchant_id = ${merchantCId} AND original_transaction_id = 'pay_e2e_detect_3001'
         `);
         if (dbResult.rows.length > 0) {
-          oppFound = true;
           const row: any = dbResult.rows[0];
-          expect(row.source_type).toBe('FAILED_PAYMENT');
-          expect(row.status).toBe('OBSERVED');
-          expect(Number(row.amount)).toBe(250000);
-          expect(Number(row.remaining_amount)).toBe(250000);
-          break;
+          if (row.status === 'VALUED' || row.status === 'DIAGNOSED') {
+            oppFound = true;
+            expect(row.source_type).toBe('FAILED_PAYMENT');
+            expect(['DIAGNOSED', 'VALUED']).toContain(row.status);
+            expect(Number(row.amount)).toBe(250000);
+            expect(row.cause).toBe('INSUFFICIENT_FUNDS');
+            expect(Number(row.recovery_probability)).toBe(0.6);
+            expect(Number(row.expected_recovery_value)).toBe(150000);
+            break;
+          }
         }
       }
 

@@ -13,9 +13,9 @@ export class FailureDetectionService {
 
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: DrizzleDb,
-    @Optional() private readonly diagnosisService?: DiagnosisService,
-    @Optional() private readonly valuationService?: ValuationService,
-    @Optional() private readonly aiExplanationService?: AiExplanationService,
+    @Optional() @Inject(DiagnosisService) private readonly diagnosisService?: DiagnosisService,
+    @Optional() @Inject(ValuationService) private readonly valuationService?: ValuationService,
+    @Optional() @Inject(AiExplanationService) private readonly aiExplanationService?: AiExplanationService,
   ) {}
 
   async processFailedPayment(
@@ -95,9 +95,7 @@ export class FailureDetectionService {
           source: paymentEntity.error_source || payload?.source,
           step: paymentEntity.error_step || payload?.step,
           reason:
-            paymentEntity.error_reason ||
-            paymentEntity.error_code ||
-            paymentEntity.error_description,
+            `${paymentEntity.error_code || ''} ${paymentEntity.error_reason || ''} ${paymentEntity.error_description || ''}`.trim(),
         };
 
         const diagnosed = await this.diagnosisService.diagnoseOpportunity(

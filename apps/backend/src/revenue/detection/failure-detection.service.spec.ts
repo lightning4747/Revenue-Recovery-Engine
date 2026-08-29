@@ -1,21 +1,53 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DRIZZLE_DB } from '../../database/database.provider';
+import { DiagnosisService } from '../diagnosis/diagnosis.service';
+import { ValuationService } from '../valuation/valuation.service';
+import { AiExplanationService } from '../ai/ai-explanation.service';
 import { FailureDetectionService } from './failure-detection.service';
 
 describe('FailureDetectionService', () => {
   let service: FailureDetectionService;
   let mockDb: any;
+  let mockDiagnosisService: any;
+  let mockValuationService: any;
+  let mockAiExplanationService: any;
 
   beforeEach(async () => {
     mockDb = {
       select: jest.fn(),
       insert: jest.fn(),
     };
+    mockDiagnosisService = {
+      diagnoseOpportunity: jest.fn().mockImplementation((id, details) =>
+        Promise.resolve({
+          id,
+          status: 'DIAGNOSED',
+          cause: 'CUSTOMER_AUTH_TIMEOUT',
+          recoveryProbability: 0.75,
+        }),
+      ),
+    };
+    mockValuationService = {
+      valueOpportunity: jest.fn().mockImplementation((id) =>
+        Promise.resolve({
+          id,
+          status: 'VALUED',
+          expectedRecoveryValue: 112500,
+          interventionCost: 500,
+        }),
+      ),
+    };
+    mockAiExplanationService = {
+      generateExplanation: jest.fn().mockResolvedValue('Explanation narrative'),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FailureDetectionService,
         { provide: DRIZZLE_DB, useValue: mockDb },
+        { provide: DiagnosisService, useValue: mockDiagnosisService },
+        { provide: ValuationService, useValue: mockValuationService },
+        { provide: AiExplanationService, useValue: mockAiExplanationService },
       ],
     }).compile();
 
@@ -68,7 +100,12 @@ describe('FailureDetectionService', () => {
 
     const result = await service.processFailedPayment('mer_100', 'evt_1', payload);
 
-    expect(result).toEqual(mockCreatedOpp);
+    expect(result).toEqual({
+      id: 'opp_12345678',
+      status: 'VALUED',
+      expectedRecoveryValue: 112500,
+      interventionCost: 500,
+    });
     expect(valuesFn).toHaveBeenCalledWith(
       expect.objectContaining({
         merchantId: 'mer_100',
