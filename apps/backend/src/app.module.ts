@@ -11,6 +11,7 @@ import { WebhooksModule } from './razorpay/webhooks/webhooks.module';
 import { DetectionModule } from './revenue/detection/detection.module';
 import { DiagnosisModule } from './revenue/diagnosis/diagnosis.module';
 import { ValuationModule } from './revenue/valuation/valuation.module';
+import { AiExplanationModule } from './revenue/ai/ai-explanation.module';
 import { OpportunityStateModule } from './recovery/state/opportunity-state.module';
 import { PrioritizationModule } from './recovery/prioritization/prioritization.module';
 import { PolicyModule } from './recovery/policy/policy.module';
