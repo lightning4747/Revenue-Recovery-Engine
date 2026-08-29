@@ -174,7 +174,7 @@ export class WebhooksService {
 
           await this.webhookQueue.add(
             'process-event',
-            { eventId },
+            { eventId, merchantId },
             {
               attempts: maxRetries,
               backoff: {

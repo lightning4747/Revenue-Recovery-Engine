@@ -1,12 +1,14 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { eq } from 'drizzle-orm';
 import { DRIZZLE_DB, DrizzleDb } from '../../database/database.provider';
 import * as schema from '../../database/schema';
+import { DetectionService } from '../../revenue/detection/detection.service';
 
 export interface WebhookJobData {
   eventId: string;
+  merchantId?: string;
 }
 
 @Processor('webhookQueue')
@@ -14,7 +16,10 @@ export interface WebhookJobData {
 export class WebhookEventsProcessor extends WorkerHost {
   private readonly logger = new Logger(WebhookEventsProcessor.name);
 
-  constructor(@Inject(DRIZZLE_DB) private readonly db: DrizzleDb) {
+  constructor(
+    @Inject(DRIZZLE_DB) private readonly db: DrizzleDb,
+    @Optional() private readonly detectionService?: DetectionService,
+  ) {
     super();
   }
 
@@ -53,10 +58,20 @@ export class WebhookEventsProcessor extends WorkerHost {
       .where(eq(schema.webhookEvents.id, eventId));
 
     try {
-      // 4. Domain Processing Pipeline (Stub/placeholder handler for Phase 05)
+      // 4. Domain Processing Pipeline (Phase 06 Failure & Degradation Detection Engine)
       this.logger.log(
         `WORKER_PROCESSING_EVENT: Processing event ${eventId} (${event.eventType})`,
       );
+
+      if (this.detectionService) {
+        await this.detectionService.processEvent({
+          id: event.id,
+          merchantId: job.data?.merchantId || (event as any).merchantId || '',
+          providerEventId: event.providerEventId,
+          eventType: event.eventType,
+          payload: event.payload as Record<string, any>,
+        });
+      }
 
       // 5. Update processingStatus -> 'PROCESSED' with processedAt timestamp
       const now = new Date().toISOString();
