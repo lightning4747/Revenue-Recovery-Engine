@@ -2,9 +2,11 @@ packages:
   - 'apps/*'
 
 allowBuilds:
+  '@google/genai': true
   bcrypt: true
   esbuild: true
   msgpackr-extract: true
+  protobufjs: true
 
 onlyBuiltDependencies:
   - esbuild
