@@ -29,6 +29,7 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.2.1",
+    "@nestjs/schedule": "^5.0.1",
     "@types/ioredis": "^5.0.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^6.2.0",
