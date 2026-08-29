@@ -1,6 +1,7 @@
 {
   "name": "revenue-recovery-engine-monorepo",
   "private": true,
+  "type": "module",
   "scripts": {
     "prepare": "husky || true",
     "build": "pnpm --filter backend build",
