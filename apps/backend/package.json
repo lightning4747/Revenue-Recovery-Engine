@@ -14,6 +14,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json --forceExit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "tunnel": "bash scripts/zrok-tunnel.sh",
     "webhook:test": "ts-node scripts/test-webhook.ts",

@@ -408,26 +408,86 @@ describe('AppController & Auth/Merchant (e2e)', () => {
       for (let i = 0; i < 20; i++) {
         await new Promise((r) => setTimeout(r, 100));
         const dbResult = await db.execute(sql`
-          SELECT source_type, status, cause, recovery_probability, expected_recovery_value, amount, remaining_amount
+          SELECT source_type, status, cause, recovery_probability, expected_recovery_value, priority_score, amount, remaining_amount
           FROM recovery_opportunities
           WHERE merchant_id = ${merchantCId} AND original_transaction_id = 'pay_e2e_detect_3001'
         `);
         if (dbResult.rows.length > 0) {
           const row: any = dbResult.rows[0];
-          if (row.status === 'VALUED' || row.status === 'DIAGNOSED') {
+          if (row.status === 'ACTION_DISPATCHED' || row.status === 'PRIORITIZED' || row.status === 'VALUED') {
             oppFound = true;
             expect(row.source_type).toBe('FAILED_PAYMENT');
-            expect(['DIAGNOSED', 'VALUED']).toContain(row.status);
+            expect(row.status).toBe('ACTION_DISPATCHED');
             expect(Number(row.amount)).toBe(250000);
             expect(row.cause).toBe('INSUFFICIENT_FUNDS');
             expect(Number(row.recovery_probability)).toBe(0.6);
             expect(Number(row.expected_recovery_value)).toBe(150000);
+            expect(Number(row.priority_score)).toBe(150000);
             break;
           }
         }
       }
 
       expect(oppFound).toBe(true);
+    });
+
+    it('Phase 08 Policy Engine - should block low-value recovery attempt (< minRecoveryAmount) with status POLICY_BLOCKED', async () => {
+      const lowAmountPayload = {
+        entity: 'event',
+        account_id: 'acc_merchantC',
+        event: 'payment.failed',
+        event_id: 'evt_e2e_policy_4001',
+        payload: {
+          payment: {
+            entity: {
+              id: 'pay_e2e_policy_4001',
+              order_id: 'order_e2e_policy_4001',
+              amount: 500, // ₹5 in paise (below default ₹10 / 1000 paise threshold)
+              currency: 'INR',
+              method: 'card',
+              error_code: 'BAD_REQUEST_ERROR',
+              error_description: 'Payment failed due to insufficient funds',
+            },
+          },
+        },
+      };
+
+      const payloadString = JSON.stringify(lowAmountPayload);
+      const nodeCrypto = await import('crypto');
+      const signature = nodeCrypto
+        .createHmac('sha256', webhookSecret)
+        .update(payloadString)
+        .digest('hex');
+
+      const response = await request(app.getHttpServer())
+        .post(`/api/v1/webhooks/razorpay/${merchantCId}`)
+        .set('Content-Type', 'application/json')
+        .set('x-razorpay-signature', signature)
+        .set('x-razorpay-event-id', 'evt_e2e_policy_4001')
+        .send(payloadString)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.status).toBe('persisted');
+
+      let blockedFound = false;
+      for (let attempt = 0; attempt < 25; attempt++) {
+        await new Promise((res) => setTimeout(res, 200));
+        const dbResult = await db.execute(sql`
+          SELECT status, amount FROM recovery_opportunities
+          WHERE merchant_id = ${merchantCId} AND original_transaction_id = 'pay_e2e_policy_4001'
+        `);
+        if (dbResult.rows.length > 0) {
+          const row: any = dbResult.rows[0];
+          if (row.status === 'POLICY_BLOCKED') {
+            blockedFound = true;
+            expect(Number(row.amount)).toBe(500);
+            break;
+          }
+        }
+      }
+
+      expect(blockedFound).toBe(true);
     });
 
     it('Phase 06 Detection Engine - should aggregate 1h rolling telemetry and trigger DEGRADATION opportunity', async () => {
