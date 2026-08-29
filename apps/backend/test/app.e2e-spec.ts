@@ -367,5 +367,98 @@ describe('AppController & Auth/Merchant (e2e)', () => {
 
       expect(processed).toBe(true);
     });
+
+    it('Phase 06 Detection Engine - should create FAILED_PAYMENT RecoveryOpportunity with status OBSERVED on payment.failed event', async () => {
+      const failPayload = {
+        entity: 'event',
+        account_id: 'acc_merchantC',
+        event: 'payment.failed',
+        event_id: 'evt_e2e_detect_3001',
+        payload: {
+          payment: {
+            entity: {
+              id: 'pay_e2e_detect_3001',
+              order_id: 'order_e2e_detect_3001',
+              amount: 250000,
+              currency: 'INR',
+              method: 'card',
+              error_code: 'BAD_REQUEST_ERROR',
+              error_description: 'Payment failed due to insufficient funds',
+            },
+          },
+        },
+      };
+      const failBodyString = JSON.stringify(failPayload);
+      const crypto = await import('crypto');
+      const failSignature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(failBodyString)
+        .digest('hex');
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/webhooks/razorpay/${merchantCId}`)
+        .set('Content-Type', 'application/json')
+        .set('X-Razorpay-Signature', failSignature)
+        .set('X-Razorpay-Event-Id', 'evt_e2e_detect_3001')
+        .send(failBodyString)
+        .expect(200);
+
+      // Poll DB for RecoveryOpportunity creation
+      let oppFound = false;
+      for (let i = 0; i < 20; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+        const dbResult = await db.execute(sql`
+          SELECT source_type, status, amount, remaining_amount
+          FROM recovery_opportunities
+          WHERE merchant_id = ${merchantCId} AND original_transaction_id = 'pay_e2e_detect_3001'
+        `);
+        if (dbResult.rows.length > 0) {
+          oppFound = true;
+          const row: any = dbResult.rows[0];
+          expect(row.source_type).toBe('FAILED_PAYMENT');
+          expect(row.status).toBe('OBSERVED');
+          expect(Number(row.amount)).toBe(250000);
+          expect(Number(row.remaining_amount)).toBe(250000);
+          break;
+        }
+      }
+
+      expect(oppFound).toBe(true);
+    });
+
+    it('Phase 06 Detection Engine - should aggregate 1h rolling telemetry and trigger DEGRADATION opportunity', async () => {
+      const { DegradationDetectionService } = await import(
+        '../src/revenue/detection/degradation-detection.service'
+      );
+      const degradationService = app.get(DegradationDetectionService);
+
+      // Seed 10 failed telemetry records for (merchantCId, card, ANOMALY_BANK)
+      for (let i = 0; i < 10; i++) {
+        await db.execute(sql`
+          INSERT INTO payment_telemetry (merchant_id, payment_method, bank, status, amount, timestamp)
+          VALUES (${merchantCId}, 'card', 'ANOMALY_BANK', 'failed', 100000, NOW())
+        `);
+      }
+
+      const results = await degradationService.evaluateDegradation(merchantCId);
+      const flagged = results.find(
+        (r) => r.merchantId === merchantCId && r.bank === 'ANOMALY_BANK',
+      );
+
+      expect(flagged).toBeDefined();
+      expect(flagged?.degradationFlagged).toBe(true);
+
+      // Verify RecoveryOpportunity created in DB
+      const oppResult = await db.execute(sql`
+        SELECT source_type, status
+        FROM recovery_opportunities
+        WHERE merchant_id = ${merchantCId} AND source_id = ${'deg_' + merchantCId + '_card_ANOMALY_BANK'}
+      `);
+
+      expect(oppResult.rows.length).toBe(1);
+      const row: any = oppResult.rows[0];
+      expect(row.source_type).toBe('DEGRADATION');
+      expect(row.status).toBe('OBSERVED');
+    });
   });
 });
