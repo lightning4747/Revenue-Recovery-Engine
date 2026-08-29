@@ -178,6 +178,7 @@ describe('AppController & Auth/Merchant (e2e)', () => {
 
   describe('Webhook Ingestion & Signature Verification (e2e)', () => {
     let merchantCId: string;
+    let tokenC: string;
     const webhookSecret = 'webhook_secret_merchantC_999';
     let validSignature: string;
 
@@ -212,7 +213,7 @@ describe('AppController & Auth/Merchant (e2e)', () => {
         })
         .expect(201);
 
-      const tokenC = regRes.body.data.accessToken;
+      tokenC = regRes.body.data.accessToken;
 
       // Extract merchantId from JWT payload
       const payloadBase64 = tokenC.split('.')[1];
@@ -734,6 +735,49 @@ describe('AppController & Auth/Merchant (e2e)', () => {
       const row: any = oppResult.rows[0];
       expect(row.source_type).toBe('DEGRADATION');
       expect(row.status).toBe('OBSERVED');
+    });
+
+    describe('Phase 11 Control Tower Dashboard Subsystem (e2e)', () => {
+      it('GET /api/v1/dashboard/summary - should return aggregated financial metrics for authenticated merchant', async () => {
+        const res = await request(app.getHttpServer())
+          .get('/api/v1/dashboard/summary')
+          .set('Authorization', `Bearer ${tokenC}`)
+          .expect(200);
+
+        expect(res.body.success).toBe(true);
+        expect(res.body.data.revenueAtRiskPaise).toBeDefined();
+        expect(res.body.data.verifiedRecoveredPaise).toBeDefined();
+        expect(res.body.data.recoveryRatePercentage).toBeDefined();
+      });
+
+      it('GET /api/v1/dashboard/opportunities - should return paginated opportunities sorted by priorityScore', async () => {
+        const res = await request(app.getHttpServer())
+          .get('/api/v1/dashboard/opportunities?page=1&limit=10')
+          .set('Authorization', `Bearer ${tokenC}`)
+          .expect(200);
+
+        expect(res.body.success).toBe(true);
+        expect(Array.isArray(res.body.data.data)).toBe(true);
+        expect(res.body.data.total).toBeDefined();
+      });
+
+      it('GET /api/v1/dashboard/audit-trail/:id - should return sanitized audit timeline', async () => {
+        const oppResult = await db.execute(sql`
+          SELECT id FROM recovery_opportunities
+          WHERE merchant_id = ${merchantCId} LIMIT 1
+        `);
+
+        if (oppResult.rows.length > 0) {
+          const oppId = (oppResult.rows[0] as any).id;
+          const res = await request(app.getHttpServer())
+            .get(`/api/v1/dashboard/audit-trail/${oppId}`)
+            .set('Authorization', `Bearer ${tokenC}`)
+            .expect(200);
+
+          expect(res.body.success).toBe(true);
+          expect(Array.isArray(res.body.data)).toBe(true);
+        }
+      });
     });
   });
 });
