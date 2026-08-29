@@ -64,4 +64,27 @@ export class MerchantService {
 
     return records.length > 0 ? records[0] : null;
   }
+
+  async getDecryptedCredentials(
+    merchantId: string,
+  ): Promise<{ keyId: string; keySecret: string; webhookSecret: string } | null> {
+    const records = await this.db
+      .select()
+      .from(schema.merchantCredentials)
+      .where(eq(schema.merchantCredentials.merchantId, merchantId));
+
+    if (records.length === 0) {
+      return null;
+    }
+
+    const creds = records[0];
+    const keySecret = this.cryptoService.decrypt(creds.encryptedKeySecret);
+    const webhookSecret = this.cryptoService.decrypt(creds.encryptedWebhookSecret);
+
+    return {
+      keyId: creds.keyId,
+      keySecret,
+      webhookSecret,
+    };
+  }
 }
