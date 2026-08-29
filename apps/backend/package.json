@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@google/genai": "^2.19.0",
-    "@nestjs/axios": "^12.0.0",
+    "@nestjs/axios": "^4.0.1",
     "@nestjs/bullmq": "^11.0.5",
     "@nestjs/common": "^11.2.1",
     "@nestjs/config": "^4.0.4",
