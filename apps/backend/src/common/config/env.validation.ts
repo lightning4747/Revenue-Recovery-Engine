@@ -13,6 +13,8 @@ export const envValidationSchema = Joi.object({
   JWT_SECRET: Joi.string().required(),
   ENCRYPTION_KEY: Joi.string().min(32).required(),
   JWT_EXPIRES_IN: Joi.string().default('1d'),
+  LLM_API_KEY: Joi.string().optional().allow(''),
+  LLM_MODEL: Joi.string().optional().allow(''),
   WORKER_CONCURRENCY: Joi.number().default(5),
   JOB_MAX_RETRIES: Joi.number().default(3),
   JOB_BACKOFF_INITIAL_DELAY_MS: Joi.number().default(5000),

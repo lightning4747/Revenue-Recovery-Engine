@@ -24,7 +24,7 @@ describe('AiExplanationService', () => {
     expect(service).toBeDefined();
   });
 
-  it('should return deterministic fallback explanation when GEMINI_API_KEY is unconfigured', async () => {
+  it('should return deterministic fallback explanation when LLM_API_KEY is unconfigured', async () => {
     const explanation = await service.generateExplanation(
       'CUSTOMER_AUTH_TIMEOUT',
       'customer',

@@ -10,12 +10,12 @@ export class AiExplanationService {
 
   constructor(private readonly configService: ConfigService) {
     const apiKey =
-      this.configService.get<string>('GEMINI_API_KEY') || process.env.GEMINI_API_KEY;
+      this.configService.get<string>('LLM_API_KEY') || process.env.LLM_API_KEY;
     if (apiKey) {
       try {
         this.aiClient = new GoogleGenAI({ apiKey });
       } catch (err: any) {
-        this.logger.warn(`Failed to initialize GoogleGenAI client: ${err?.message}`);
+        this.logger.warn(`Failed to initialize LLM client: ${err?.message}`);
       }
     }
   }
@@ -33,7 +33,7 @@ export class AiExplanationService {
 
     if (!this.aiClient) {
       this.logger.debug(
-        'GEMINI_API_KEY not configured. Returning deterministic fallback explanation.',
+        'LLM_API_KEY not configured. Returning deterministic fallback explanation.',
       );
       return fallback;
     }
@@ -42,8 +42,12 @@ export class AiExplanationService {
 
     try {
       const llmCallPromise = (async () => {
+        const modelName =
+          this.configService.get<string>('LLM_MODEL') ||
+          process.env.LLM_MODEL ||
+          'gemini-2.5-flash';
         const response = await this.aiClient!.models.generateContent({
-          model: 'gemini-2.5-flash',
+          model: modelName,
           contents: prompt,
         });
         const text = response?.text?.trim();

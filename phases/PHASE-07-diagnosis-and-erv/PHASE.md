@@ -41,7 +41,7 @@ A core value proposition of RRE is intelligent failure diagnosis and financial q
   * Compute $ERV = \text{round}(P_{\text{success}} \times \text{amount})$ in integer paise.
   * Update opportunity `status` $\rightarrow$ `'VALUED'`.
 * **Advisory AI Explanation & Fallback Generator (HIGH-03, FR-029)**:
-  * Asynchronously invoke LLM service (Google Gemini / OpenAI) to generate human-readable narrative explanations.
+  * Asynchronously invoke LLM service to generate human-readable narrative explanations.
   * Impose strict 3000ms timeout budget.
   * On timeout, 5xx error, or low confidence ($< 0.60$), invoke **Deterministic Fallback Generator**:
     `"Payment failure classified as {cause} based on Razorpay error taxonomy (source: {source}, reason: {reason}). Action authorized per merchant policy rules."`
@@ -72,7 +72,7 @@ A core value proposition of RRE is intelligent failure diagnosis and financial q
      - Calculates intervention cost estimate (paise).
      - Updates `RecoveryOpportunity` with `expectedRecoveryValue` and sets `status` $\rightarrow$ `'VALUED'`.
 3. **Advisory AI Explanation & Fallback Generator**:
-   * Create `AiExplanationService` using `@google/genai` or `@langchain/core` (installed via `pnpm add @google/genai`):
+   * Create `AiExplanationService` using `LLM_API_KEY`:
      - Calls LLM API with a 3000ms Promise timeout wrapper.
      - If LLM call succeeds, returns generated narrative explanation string.
      - If LLM call times out or throws error, logs warning and returns deterministic fallback narrative string:
