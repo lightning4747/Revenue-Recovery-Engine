@@ -9,6 +9,9 @@ import { HealthModule } from './health/health.module';
 import { MerchantModule } from './merchant/merchant.module';
 import { WebhooksModule } from './razorpay/webhooks/webhooks.module';
 import { DetectionModule } from './revenue/detection/detection.module';
+import { DiagnosisModule } from './revenue/diagnosis/diagnosis.module';
+import { ValuationModule } from './revenue/valuation/valuation.module';
+import { AiExplanationModule } from './revenue/ai/ai-explanation.module';
 
 @Module({
   imports: [
@@ -31,6 +34,9 @@ import { DetectionModule } from './revenue/detection/detection.module';
     WebhooksModule,
     EventsModule,
     DetectionModule,
+    DiagnosisModule,
+    ValuationModule,
+    AiExplanationModule,
   ],
 })
 export class AppModule {}

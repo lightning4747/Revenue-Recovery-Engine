@@ -1,14 +1,22 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { eq, and } from 'drizzle-orm';
 import { DRIZZLE_DB, DrizzleDb } from '../../database/database.provider';
 import * as schema from '../../database/schema';
+import { DiagnosisService } from '../diagnosis/diagnosis.service';
+import { ValuationService } from '../valuation/valuation.service';
+import { AiExplanationService } from '../ai/ai-explanation.service';
 
 @Injectable()
 export class FailureDetectionService {
   private readonly logger = new Logger(FailureDetectionService.name);
 
-  constructor(@Inject(DRIZZLE_DB) private readonly db: DrizzleDb) {}
+  constructor(
+    @Inject(DRIZZLE_DB) private readonly db: DrizzleDb,
+    @Optional() private readonly diagnosisService?: DiagnosisService,
+    @Optional() private readonly valuationService?: ValuationService,
+    @Optional() private readonly aiExplanationService?: AiExplanationService,
+  ) {}
 
   async processFailedPayment(
     merchantId: string,
@@ -79,7 +87,42 @@ export class FailureDetectionService {
         `RECOVERY_OPPORTUNITY_CREATED: Created FAILED_PAYMENT opportunity ${opportunityId} for transaction ${paymentId} (Amount: ${amount} ${currency})`,
       );
 
-      return inserted[0] || null;
+      const opp = inserted[0];
+
+      // 3. Trigger Phase 07 Diagnosis and Valuation Pipeline
+      if (opp && this.diagnosisService) {
+        const errorDetails = {
+          source: paymentEntity.error_source || payload?.source,
+          step: paymentEntity.error_step || payload?.step,
+          reason:
+            paymentEntity.error_reason ||
+            paymentEntity.error_code ||
+            paymentEntity.error_description,
+        };
+
+        const diagnosed = await this.diagnosisService.diagnoseOpportunity(
+          opp.id,
+          errorDetails,
+        );
+
+        if (diagnosed && diagnosed.status === 'DIAGNOSED' && this.valuationService) {
+          const valued = await this.valuationService.valueOpportunity(opp.id);
+          if (this.aiExplanationService) {
+            this.aiExplanationService
+              .generateExplanation(
+                diagnosed.cause || 'UNKNOWN_LEAKAGE',
+                errorDetails.source,
+                errorDetails.reason,
+              )
+              .catch(() => {});
+          }
+          return valued || diagnosed;
+        }
+
+        return diagnosed || opp;
+      }
+
+      return opp || null;
     } catch (error: any) {
       this.logger.error(
         `Failed to create RecoveryOpportunity for payment ${paymentId}: ${error?.message}`,
