@@ -3,6 +3,8 @@ import { DRIZZLE_DB } from '../../database/database.provider';
 import { DiagnosisService } from '../diagnosis/diagnosis.service';
 import { ValuationService } from '../valuation/valuation.service';
 import { AiExplanationService } from '../ai/ai-explanation.service';
+import { PrioritizationService } from '../../recovery/prioritization/prioritization.service';
+import { PolicyEngineService } from '../../recovery/policy/policy-engine.service';
 import { FailureDetectionService } from './failure-detection.service';
 
 describe('FailureDetectionService', () => {
@@ -11,6 +13,8 @@ describe('FailureDetectionService', () => {
   let mockDiagnosisService: any;
   let mockValuationService: any;
   let mockAiExplanationService: any;
+  let mockPrioritizationService: any;
+  let mockPolicyEngineService: any;
 
   beforeEach(async () => {
     mockDb = {
@@ -40,6 +44,27 @@ describe('FailureDetectionService', () => {
     mockAiExplanationService = {
       generateExplanation: jest.fn().mockResolvedValue('Explanation narrative'),
     };
+    mockPrioritizationService = {
+      prioritizeOpportunity: jest.fn().mockImplementation((id) =>
+        Promise.resolve({
+          id,
+          status: 'PRIORITIZED',
+          priorityScore: 112500,
+        }),
+      ),
+    };
+    mockPolicyEngineService = {
+      evaluatePolicy: jest.fn().mockImplementation((id) =>
+        Promise.resolve({
+          opportunity: {
+            id,
+            status: 'ACTION_DISPATCHED',
+            priorityScore: 112500,
+          },
+          evaluation: { approved: true, reason: 'POLICY_RULES_PASSED_OK' },
+        }),
+      ),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -48,6 +73,8 @@ describe('FailureDetectionService', () => {
         { provide: DiagnosisService, useValue: mockDiagnosisService },
         { provide: ValuationService, useValue: mockValuationService },
         { provide: AiExplanationService, useValue: mockAiExplanationService },
+        { provide: PrioritizationService, useValue: mockPrioritizationService },
+        { provide: PolicyEngineService, useValue: mockPolicyEngineService },
       ],
     }).compile();
 
@@ -102,9 +129,8 @@ describe('FailureDetectionService', () => {
 
     expect(result).toEqual({
       id: 'opp_12345678',
-      status: 'VALUED',
-      expectedRecoveryValue: 112500,
-      interventionCost: 500,
+      status: 'ACTION_DISPATCHED',
+      priorityScore: 112500,
     });
     expect(valuesFn).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -7,6 +7,9 @@ import { DiagnosisService } from '../diagnosis/diagnosis.service';
 import { ValuationService } from '../valuation/valuation.service';
 import { AiExplanationService } from '../ai/ai-explanation.service';
 
+import { PrioritizationService } from '../../recovery/prioritization/prioritization.service';
+import { PolicyEngineService } from '../../recovery/policy/policy-engine.service';
+
 @Injectable()
 export class FailureDetectionService {
   private readonly logger = new Logger(FailureDetectionService.name);
@@ -16,6 +19,8 @@ export class FailureDetectionService {
     @Optional() @Inject(DiagnosisService) private readonly diagnosisService?: DiagnosisService,
     @Optional() @Inject(ValuationService) private readonly valuationService?: ValuationService,
     @Optional() @Inject(AiExplanationService) private readonly aiExplanationService?: AiExplanationService,
+    @Optional() @Inject(PrioritizationService) private readonly prioritizationService?: PrioritizationService,
+    @Optional() @Inject(PolicyEngineService) private readonly policyEngineService?: PolicyEngineService,
   ) {}
 
   async processFailedPayment(
@@ -114,6 +119,17 @@ export class FailureDetectionService {
               )
               .catch(() => {});
           }
+
+          // 4. Trigger Phase 08 Prioritization & Merchant Policy Pipeline
+          if (valued && valued.status === 'VALUED' && this.prioritizationService) {
+            const prioritized = await this.prioritizationService.prioritizeOpportunity(opp.id);
+            if (prioritized && prioritized.status === 'PRIORITIZED' && this.policyEngineService) {
+              const { opportunity: policyEvaluatedOpp } = await this.policyEngineService.evaluatePolicy(opp.id);
+              return policyEvaluatedOpp || prioritized;
+            }
+            return prioritized || valued;
+          }
+
           return valued || diagnosed;
         }
 

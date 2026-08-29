@@ -9,6 +9,8 @@ import { ValuationService } from '../valuation/valuation.service';
 import { DiagnosisModule } from '../diagnosis/diagnosis.module';
 import { ValuationModule } from '../valuation/valuation.module';
 import { AiExplanationModule } from '../ai/ai-explanation.module';
+import { PrioritizationModule } from '../../recovery/prioritization/prioritization.module';
+import { PolicyModule } from '../../recovery/policy/policy.module';
 import { DegradationDetectionService } from './degradation-detection.service';
 import { DetectionService } from './detection.service';
 import { FailureDetectionService } from './failure-detection.service';
@@ -22,6 +24,8 @@ import { TelemetryService } from './telemetry.service';
     DiagnosisModule,
     ValuationModule,
     AiExplanationModule,
+    PrioritizationModule,
+    PolicyModule,
   ],
   providers: [
     DetectionService,
