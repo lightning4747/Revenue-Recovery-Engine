@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 const DOCS_DIR = '/home/bow/projects/Revenue-recovery-engine/docs';
 
@@ -132,4 +133,26 @@ export async function readDocSection(filename, sectionHeading) {
   }
 
   return sectionLines.join('\n').trim();
+}
+
+// Enable direct CLI invocation from terminal when run directly: `node docsReader.js ...`
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  const args = process.argv.slice(2);
+  const command = args[0];
+
+  if (!command || command === 'index' || command === '--index') {
+    const index = await getDocsIndex();
+    console.log(JSON.stringify(index, null, 2));
+  } else if (command === 'read') {
+    const filename = args[1];
+    const sectionHeading = args[2];
+    const result = await readDocSection(filename, sectionHeading);
+    console.log(result);
+  } else {
+    // Shorthand: `node docsReader.js <filename> <sectionHeading>`
+    const filename = args[0];
+    const sectionHeading = args[1];
+    const result = await readDocSection(filename, sectionHeading);
+    console.log(result);
+  }
 }
