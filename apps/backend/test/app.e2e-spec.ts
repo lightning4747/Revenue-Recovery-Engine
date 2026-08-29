@@ -408,13 +408,13 @@ describe('AppController & Auth/Merchant (e2e)', () => {
       for (let i = 0; i < 20; i++) {
         await new Promise((r) => setTimeout(r, 100));
         const dbResult = await db.execute(sql`
-          SELECT source_type, status, cause, recovery_probability, expected_recovery_value, priority_score, amount, remaining_amount
+          SELECT source_type, status, cause, recovery_probability, expected_recovery_value, priority_score, last_payment_link_id, last_payment_link_url, last_reference_id, amount, remaining_amount
           FROM recovery_opportunities
           WHERE merchant_id = ${merchantCId} AND original_transaction_id = 'pay_e2e_detect_3001'
         `);
         if (dbResult.rows.length > 0) {
           const row: any = dbResult.rows[0];
-          if (row.status === 'ACTION_DISPATCHED' || row.status === 'PRIORITIZED' || row.status === 'VALUED') {
+          if (row.status === 'ACTION_DISPATCHED') {
             oppFound = true;
             expect(row.source_type).toBe('FAILED_PAYMENT');
             expect(row.status).toBe('ACTION_DISPATCHED');
@@ -423,6 +423,9 @@ describe('AppController & Auth/Merchant (e2e)', () => {
             expect(Number(row.recovery_probability)).toBe(0.6);
             expect(Number(row.expected_recovery_value)).toBe(150000);
             expect(Number(row.priority_score)).toBe(150000);
+            expect(row.last_payment_link_id).toBeDefined();
+            expect(row.last_payment_link_url).toContain('https://rzp.io/i/');
+            expect(row.last_reference_id).toContain('_att_1');
             break;
           }
         }
