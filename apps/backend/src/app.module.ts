@@ -18,6 +18,7 @@ import { PolicyModule } from './recovery/policy/policy.module';
 
 import { PaymentLinksModule } from './razorpay/payment-links/payment-links.module';
 import { VerificationModule } from './recovery/verification/verification.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { VerificationModule } from './recovery/verification/verification.module'
     PolicyModule,
     PaymentLinksModule,
     VerificationModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}
