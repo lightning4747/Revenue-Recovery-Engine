@@ -1,8 +1,9 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { DRIZZLE_DB, DrizzleDb } from '../../database/database.provider';
 import * as schema from '../../database/schema';
 import { OpportunityStateMachineService } from '../state/opportunity-state-machine.service';
+import { PaymentLinkActionService } from '../../razorpay/payment-links/payment-link-action.service';
 
 export interface PolicyEvaluationResult {
   approved: boolean;
@@ -16,6 +17,7 @@ export class PolicyEngineService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: DrizzleDb,
     private readonly stateMachineService: OpportunityStateMachineService,
+    @Optional() @Inject(PaymentLinkActionService) private readonly paymentLinkActionService?: PaymentLinkActionService,
   ) {}
 
   async evaluatePolicy(
@@ -90,15 +92,21 @@ export class PolicyEngineService {
       opportunity;
 
     if (evaluation.approved) {
-      // Transition PRIORITIZED -> ACTION_DISPATCHED
-      updatedOpp = await this.stateMachineService.transitionState(
-        opportunityId,
-        'ACTION_DISPATCHED',
-        evaluation.reason,
-      );
       this.logger.log(
         `POLICY_APPROVED: Opportunity ${opportunityId} authorized for action dispatch`,
       );
+      if (this.paymentLinkActionService) {
+        const dispatchedOpp = await this.paymentLinkActionService.executePaymentLinkAction(
+          opportunityId,
+        );
+        updatedOpp = dispatchedOpp || updatedOpp;
+      } else {
+        updatedOpp = await this.stateMachineService.transitionState(
+          opportunityId,
+          'ACTION_DISPATCHED',
+          evaluation.reason,
+        );
+      }
     } else {
       // Transition PRIORITIZED -> POLICY_BLOCKED
       updatedOpp = await this.stateMachineService.transitionState(

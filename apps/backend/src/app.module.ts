@@ -16,6 +16,8 @@ import { OpportunityStateModule } from './recovery/state/opportunity-state.modul
 import { PrioritizationModule } from './recovery/prioritization/prioritization.module';
 import { PolicyModule } from './recovery/policy/policy.module';
 
+import { PaymentLinksModule } from './razorpay/payment-links/payment-links.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -43,6 +45,7 @@ import { PolicyModule } from './recovery/policy/policy.module';
     OpportunityStateModule,
     PrioritizationModule,
     PolicyModule,
+    PaymentLinksModule,
   ],
 })
 export class AppModule {}
