@@ -22,6 +22,19 @@ export const loginMerchant = async (email: string, password: string): Promise<st
   return token;
 };
 
+export const registerMerchant = async (
+  email: string,
+  password: string,
+  businessName: string,
+): Promise<string> => {
+  const res = await api.post('/auth/register', { email, password, businessName });
+  const token = res.data?.data?.accessToken || res.data?.accessToken;
+  if (token) {
+    localStorage.setItem('rre_token', token);
+  }
+  return token;
+};
+
 export const fetchSummary = async (): Promise<DashboardSummary> => {
   const res = await api.get('/dashboard/summary');
   return res.data?.data || res.data;
