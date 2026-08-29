@@ -20,8 +20,9 @@ export class OutcomeVerificationService {
     eventType: string,
     payload: any,
   ): Promise<{ success: boolean; opportunityId?: string; isDuplicate?: boolean }> {
-    const linkEntity = payload?.payment_link?.entity || payload?.payment_link || payload;
-    const paymentEntity = payload?.payment?.entity || payload?.payment;
+    const rootPayload = payload?.payload || payload;
+    const linkEntity = rootPayload?.payment_link?.entity || rootPayload?.payment_link || payload;
+    const paymentEntity = rootPayload?.payment?.entity || rootPayload?.payment;
 
     let opportunityId =
       linkEntity?.notes?.opportunity_id ||
