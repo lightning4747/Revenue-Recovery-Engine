@@ -434,6 +434,214 @@ describe('AppController & Auth/Merchant (e2e)', () => {
       expect(oppFound).toBe(true);
     });
 
+    it('Phase 10 Outcome Verification - should process partial payment_link.partially_paid webhook (₹1,000) and update status to PARTIALLY_RECOVERED', async () => {
+      const oppQuery = await db.execute(sql`
+        SELECT id FROM recovery_opportunities
+        WHERE merchant_id = ${merchantCId} AND original_transaction_id = 'pay_e2e_detect_3001'
+      `);
+      const oppId = (oppQuery.rows[0] as any).id;
+
+      const partialPayload = {
+        entity: 'event',
+        account_id: 'acc_merchantC',
+        event: 'payment_link.partially_paid',
+        event_id: 'evt_e2e_partial_5001',
+        contains: ['payment_link', 'payment'],
+        payload: {
+          payment_link: {
+            entity: {
+              id: 'plink_e2e_5001',
+              reference_id: `${oppId.substring(0, 24)}_att_1`,
+              amount_paid: 100000,
+              notes: {
+                opportunity_id: oppId,
+              },
+            },
+          },
+          payment: {
+            entity: {
+              id: 'pay_part_5001',
+              amount: 100000,
+              status: 'captured',
+            },
+          },
+        },
+      };
+
+      const payloadString = JSON.stringify(partialPayload);
+      const crypto = await import('crypto');
+      const signature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(payloadString)
+        .digest('hex');
+
+      const response = await request(app.getHttpServer())
+        .post(`/api/v1/webhooks/razorpay/${merchantCId}`)
+        .set('Content-Type', 'application/json')
+        .set('X-Razorpay-Signature', signature)
+        .set('X-Razorpay-Event-Id', 'evt_e2e_partial_5001')
+        .send(payloadString)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+
+      let partialFound = false;
+      for (let attempt = 0; attempt < 25; attempt++) {
+        await new Promise((r) => setTimeout(r, 100));
+        const dbResult = await db.execute(sql`
+          SELECT status, recovered_amount, remaining_amount
+          FROM recovery_opportunities
+          WHERE id = ${oppId}
+        `);
+        if (dbResult.rows.length > 0) {
+          const row: any = dbResult.rows[0];
+          if (row.status === 'PARTIALLY_RECOVERED') {
+            partialFound = true;
+            expect(Number(row.recovered_amount)).toBe(100000);
+            expect(Number(row.remaining_amount)).toBe(150000);
+            break;
+          }
+        }
+      }
+
+      expect(partialFound).toBe(true);
+    });
+
+    it('Phase 10 Financial Idempotency - duplicate payment webhook pay_part_5001 should skip ledger update without double counting', async () => {
+      const oppQuery = await db.execute(sql`
+        SELECT id FROM recovery_opportunities
+        WHERE merchant_id = ${merchantCId} AND original_transaction_id = 'pay_e2e_detect_3001'
+      `);
+      const oppId = (oppQuery.rows[0] as any).id;
+
+      const dupPayload = {
+        entity: 'event',
+        account_id: 'acc_merchantC',
+        event: 'payment_link.partially_paid',
+        event_id: 'evt_e2e_partial_5001_dup',
+        contains: ['payment_link', 'payment'],
+        payload: {
+          payment_link: {
+            entity: {
+              id: 'plink_e2e_5001',
+              reference_id: `${oppId.substring(0, 24)}_att_1`,
+              amount_paid: 100000,
+              notes: {
+                opportunity_id: oppId,
+              },
+            },
+          },
+          payment: {
+            entity: {
+              id: 'pay_part_5001',
+              amount: 100000,
+              status: 'captured',
+            },
+          },
+        },
+      };
+
+      const payloadString = JSON.stringify(dupPayload);
+      const crypto = await import('crypto');
+      const signature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(payloadString)
+        .digest('hex');
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/webhooks/razorpay/${merchantCId}`)
+        .set('Content-Type', 'application/json')
+        .set('X-Razorpay-Signature', signature)
+        .set('X-Razorpay-Event-Id', 'evt_e2e_partial_5001_dup')
+        .send(payloadString)
+        .expect(200);
+
+      await new Promise((r) => setTimeout(r, 500));
+
+      const dbResult = await db.execute(sql`
+        SELECT status, recovered_amount, remaining_amount
+        FROM recovery_opportunities
+        WHERE id = ${oppId}
+      `);
+
+      const row: any = dbResult.rows[0];
+      expect(row.status).toBe('PARTIALLY_RECOVERED');
+      expect(Number(row.recovered_amount)).toBe(100000);
+      expect(Number(row.remaining_amount)).toBe(150000);
+    });
+
+    it('Phase 10 Outcome Verification - should process final payment_link.paid webhook (₹1,500) and update status to RECOVERED', async () => {
+      const oppQuery = await db.execute(sql`
+        SELECT id FROM recovery_opportunities
+        WHERE merchant_id = ${merchantCId} AND original_transaction_id = 'pay_e2e_detect_3001'
+      `);
+      const oppId = (oppQuery.rows[0] as any).id;
+
+      const finalPayload = {
+        entity: 'event',
+        account_id: 'acc_merchantC',
+        event: 'payment_link.paid',
+        event_id: 'evt_e2e_final_5002',
+        contains: ['payment_link', 'payment'],
+        payload: {
+          payment_link: {
+            entity: {
+              id: 'plink_e2e_5001',
+              reference_id: `${oppId.substring(0, 24)}_att_1`,
+              amount_paid: 250000,
+              notes: {
+                opportunity_id: oppId,
+              },
+            },
+          },
+          payment: {
+            entity: {
+              id: 'pay_final_5002',
+              amount: 150000,
+              status: 'captured',
+            },
+          },
+        },
+      };
+
+      const payloadString = JSON.stringify(finalPayload);
+      const crypto = await import('crypto');
+      const signature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(payloadString)
+        .digest('hex');
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/webhooks/razorpay/${merchantCId}`)
+        .set('Content-Type', 'application/json')
+        .set('X-Razorpay-Signature', signature)
+        .set('X-Razorpay-Event-Id', 'evt_e2e_final_5002')
+        .send(payloadString)
+        .expect(200);
+
+      let recoveredFound = false;
+      for (let attempt = 0; attempt < 25; attempt++) {
+        await new Promise((r) => setTimeout(r, 100));
+        const dbResult = await db.execute(sql`
+          SELECT status, recovered_amount, remaining_amount, resolved_at
+          FROM recovery_opportunities
+          WHERE id = ${oppId}
+        `);
+        if (dbResult.rows.length > 0) {
+          const row: any = dbResult.rows[0];
+          if (row.status === 'RECOVERED') {
+            recoveredFound = true;
+            expect(Number(row.recovered_amount)).toBe(250000);
+            expect(Number(row.remaining_amount)).toBe(0);
+            expect(row.resolved_at).toBeDefined();
+            break;
+          }
+        }
+      }
+
+      expect(recoveredFound).toBe(true);
+    });
+
     it('Phase 08 Policy Engine - should block low-value recovery attempt (< minRecoveryAmount) with status POLICY_BLOCKED', async () => {
       const lowAmountPayload = {
         entity: 'event',
