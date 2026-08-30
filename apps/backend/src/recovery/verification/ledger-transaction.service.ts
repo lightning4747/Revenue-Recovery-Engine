@@ -123,6 +123,7 @@ export class LedgerTransactionService {
           newRecoveredAmount,
           newRemainingAmount,
         },
+        tx,
       );
 
       this.logger.log(

@@ -96,6 +96,7 @@ describe('LedgerTransactionService', () => {
         newRecoveredAmount: 200000,
         newRemainingAmount: 800000,
       }),
+      expect.anything(),
     );
   });
 

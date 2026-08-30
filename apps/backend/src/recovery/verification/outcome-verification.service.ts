@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, and, or } from 'drizzle-orm';
 import { DRIZZLE_DB, DrizzleDb } from '../../database/database.provider';
 import * as schema from '../../database/schema';
 import { OpportunityStateMachineService } from '../state/opportunity-state-machine.service';
@@ -28,34 +28,48 @@ export class OutcomeVerificationService {
       linkEntity?.notes?.opportunity_id ||
       payload?.notes?.opportunity_id;
 
-    if (!opportunityId && linkEntity?.reference_id) {
-      // reference_id format: opp_<shortId>_att_<attemptCount>
-      const refId: string = linkEntity.reference_id;
-      if (refId.startsWith('opp_')) {
-        const parts = refId.split('_att_');
-        opportunityId = parts[0];
-      }
+    const refId = linkEntity?.reference_id || payload?.reference_id;
+
+    if (!opportunityId && refId && typeof refId === 'string' && refId.startsWith('opp_')) {
+      const parts = refId.split('_att_');
+      opportunityId = parts[0];
     }
 
-    if (!opportunityId) {
+    if (!opportunityId && !refId) {
       this.logger.warn(
         `OUTCOME_VERIFICATION_WARN: Could not correlate webhook event ${eventType} to Opportunity (Missing notes.opportunity_id or reference_id)`,
       );
       return { success: false };
     }
 
-    // Verify opportunity exists for tenant isolation
+    const matchConditions = [];
+    if (opportunityId) {
+      matchConditions.push(eq(schema.recoveryOpportunities.id, opportunityId));
+    }
+    if (refId) {
+      matchConditions.push(eq(schema.recoveryOpportunities.lastReferenceId, refId));
+    }
+
+    // Verify opportunity exists for tenant isolation via Tier 1 correlation (id OR lastReferenceId)
     const opps = await this.db
       .select()
       .from(schema.recoveryOpportunities)
-      .where(eq(schema.recoveryOpportunities.id, opportunityId));
+      .where(
+        and(
+          eq(schema.recoveryOpportunities.merchantId, merchantId),
+          or(...matchConditions),
+        ),
+      );
 
     if (opps.length === 0) {
       this.logger.warn(
-        `OUTCOME_VERIFICATION_WARN: Opportunity ${opportunityId} not found for merchant ${merchantId}`,
+        `OUTCOME_VERIFICATION_WARN: Opportunity ${opportunityId || refId} not found for merchant ${merchantId}`,
       );
       return { success: false, opportunityId };
     }
+
+    const matchedOpp = opps[0];
+    opportunityId = matchedOpp.id;
 
     if (eventType === 'payment_link.partially_paid' || eventType === 'payment_link.paid') {
       const razorpayPaymentId = paymentEntity?.id;

@@ -20,8 +20,10 @@ export class OpportunityStateMachineService {
     targetState: OpportunityState,
     reason?: string,
     additionalMetadata?: Record<string, any>,
+    tx?: DrizzleDb | any,
   ): Promise<typeof schema.recoveryOpportunities.$inferSelect | null> {
-    const opportunities = await this.db
+    const dbClient = tx || this.db;
+    const opportunities = await dbClient
       .select()
       .from(schema.recoveryOpportunities)
       .where(eq(schema.recoveryOpportunities.id, opportunityId));
@@ -53,7 +55,7 @@ export class OpportunityStateMachineService {
     const now = new Date().toISOString();
 
     // 1. Update opportunity status in DB
-    const updated = await this.db
+    const updated = await dbClient
       .update(schema.recoveryOpportunities)
       .set({
         status: targetState,
@@ -67,7 +69,7 @@ export class OpportunityStateMachineService {
 
     // 2. Audit log state change into audit_events table
     try {
-      await this.db.insert(schema.auditEvents).values({
+      await dbClient.insert(schema.auditEvents).values({
         merchantId: opportunity.merchantId,
         opportunityId: opportunityId,
         eventType: `OPPORTUNITY_STATE_CHANGE_${currentState}_TO_${targetState}`,

@@ -75,7 +75,7 @@ export class PaymentLinkActionService {
           payload,
         );
       } catch (apiErr: any) {
-        if (process.env.ENABLE_MOCK_FALLBACK === 'true') {
+        if (credentials.keyId.startsWith('rzp_test_') || process.env.ENABLE_MOCK_FALLBACK === 'true') {
           this.logger.warn(
             `RAZORPAY_TEST_MODE_FALLBACK: Razorpay API call failed (${apiErr?.message}). Generating test mode launch link.`,
           );

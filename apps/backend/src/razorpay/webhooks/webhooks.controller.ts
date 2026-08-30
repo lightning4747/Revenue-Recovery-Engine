@@ -8,11 +8,9 @@ import {
   Post,
   RawBody,
 } from '@nestjs/common';
-import { BypassTransform } from '../../common/decorators/bypass-transform.decorator';
 import { WebhooksService, WebhookHandlingResult } from './webhooks.service';
 
 @Controller('api/v1/webhooks/razorpay')
-@BypassTransform()
 export class RazorpayWebhookController {
   constructor(private readonly webhooksService: WebhooksService) {}
 
