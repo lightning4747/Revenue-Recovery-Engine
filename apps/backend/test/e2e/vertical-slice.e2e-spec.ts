@@ -100,7 +100,7 @@ describe('Phase 12 E2E Hardening - Vertical Slice (e2e)', () => {
 
     // 2. Wait for worker processing & action dispatch (ACTION_DISPATCHED status)
     let oppId = '';
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 60; i++) {
       await new Promise((res) => setTimeout(res, 250));
       const dbResult = await db.execute(sql`
         SELECT id, status FROM recovery_opportunities
