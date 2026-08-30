@@ -1,7 +1,37 @@
 import * as crypto from 'crypto';
+import * as fs from 'fs';
 import * as http from 'http';
 import * as https from 'https';
+import * as path from 'path';
 import { URL } from 'url';
+
+// Load .env file automatically if process.env values not already set
+function loadEnvFile() {
+  const envPaths = [
+    path.join(__dirname, '../.env'),
+    path.join(process.cwd(), '.env'),
+    path.join(process.cwd(), 'apps/backend/.env'),
+  ];
+  for (const envPath of envPaths) {
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, 'utf8');
+      for (const line of content.split('\n')) {
+        const trimmed = line.trim();
+        if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
+          const idx = trimmed.indexOf('=');
+          const key = trimmed.substring(0, idx).trim();
+          const val = trimmed.substring(idx + 1).trim().replace(/^["']|["']$/g, '');
+          if (key && !process.env[key]) {
+            process.env[key] = val;
+          }
+        }
+      }
+      break;
+    }
+  }
+}
+
+loadEnvFile();
 
 // Helper to extract CLI flags (--key=value) or fallback to environment variables
 function getOption(flagName: string, envName: string, fallback?: string): string | undefined {
@@ -117,21 +147,17 @@ function buildPayload(evId: string, evType: string): string {
 
 // Ensures a valid test merchant exists with configured webhook credentials if none provided
 async function resolveMerchantAndSecret(): Promise<{ merchantId: string; webhookSecret: string }> {
-  // If merchantId was explicitly provided via CLI/ENV, use explicit values
+  const defaultSecret = rawWebhookSecret || 'bow_webhook_secret_123';
+
   if (rawMerchantId) {
     return {
       merchantId: rawMerchantId,
-      webhookSecret: rawWebhookSecret || 'dummy_webhook_secret',
+      webhookSecret: defaultSecret,
     };
   }
 
-  // Default to m_default_merchant (the persistent default merchant account for merchant@example.com)
-  const defaultMerchantId = 'm_default_merchant';
-  const defaultSecret = rawWebhookSecret || 'dummy_webhook_secret';
-
   const cleanBase = baseUrl.replace(/\/$/, '');
   try {
-    // Log in as default merchant to ensure default credentials exist
     const loginRes = await sendHttpRequest(
       `${cleanBase}/api/v1/auth/login`,
       'POST',
@@ -140,29 +166,41 @@ async function resolveMerchantAndSecret(): Promise<{ merchantId: string; webhook
         password: 'password123',
       }),
     );
+
     if (loginRes.statusCode === 200) {
       const parsed = JSON.parse(loginRes.body);
       const accessToken = parsed?.data?.accessToken;
       if (accessToken) {
-        // Upsert merchant credentials for m_default_merchant
-        await sendHttpRequest(
-          `${cleanBase}/api/v1/merchant/credentials`,
-          'PUT',
-          JSON.stringify({
-            keyId: 'rzp_test_default_key',
-            keySecret: 'dummy_key_secret',
+        const parts = accessToken.split('.');
+        if (parts.length === 3) {
+          const decoded = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+          const merchantId = decoded.sub;
+
+          // Upsert merchant credentials for logged in merchant account
+          await sendHttpRequest(
+            `${cleanBase}/api/v1/merchant/credentials`,
+            'PUT',
+            JSON.stringify({
+              keyId: 'rzp_test_default_key',
+              keySecret: 'dummy_key_secret',
+              webhookSecret: defaultSecret,
+            }),
+            { Authorization: `Bearer ${accessToken}` },
+          );
+
+          return {
+            merchantId,
             webhookSecret: defaultSecret,
-          }),
-          { Authorization: `Bearer ${accessToken}` },
-        );
+          };
+        }
       }
     }
   } catch {
-    // If backend auto-setup fails, fallback to default ID
+    // If backend connection fails, fallback
   }
 
   return {
-    merchantId: defaultMerchantId,
+    merchantId: 'm_default_merchant',
     webhookSecret: defaultSecret,
   };
 }
