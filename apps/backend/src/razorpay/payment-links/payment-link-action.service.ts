@@ -63,6 +63,8 @@ export class PaymentLinkActionService {
     const referenceId = `${shortOppId}_att_${nextAttempt}`;
 
     const amountPaise = Number(opportunity.amount || 0);
+    const customerEmail = (opportunity as any).customerEmail || 'idontkniwhudhu@gmail.com';
+    const customerContact = (opportunity as any).customerContact || '+919360220856';
 
     const payload = {
       amount: amountPaise,
@@ -70,6 +72,16 @@ export class PaymentLinkActionService {
       accept_partial: true,
       reference_id: referenceId,
       description: `Revenue Recovery link for transaction ${opportunity.originalTransactionId || opportunity.id}`,
+      customer: {
+        name: 'Customer',
+        email: customerEmail,
+        contact: customerContact,
+      },
+      notify: {
+        sms: false,
+        email: false,
+        whatsapp: false,
+      },
       notes: {
         opportunity_id: opportunity.id,
         original_order_id: opportunity.originalOrderId || 'N/A',
