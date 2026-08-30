@@ -40,26 +40,30 @@ The system shall:
 
 # 3. Scope
 
-## 3.1 In Scope
+## 3.1 In Scope (MVP Core Capabilities)
 
-The initial system shall support the following revenue-loss categories:
+The MVP system shall focus on the following primary revenue-recovery capabilities (per `IMPLEMENTATION_STRATEGY.md` Section 4):
 
-* Failed payments
-* Payment degradation
-* Checkout abandonment
-* Failed recurring/subscription payments
-* Overdue receivables
-* Payment recovery prioritization
-* Revenue-at-risk calculation
-* Recovery action execution
-* Recovery outcome verification
-* Revenue recovery analytics
-* Merchant recovery policies
-* Audit logging
-* Explainable AI decisions
-* Razorpay test-mode integration
+* Failed payment detection & recovery (`FR-005`)
+* Payment degradation detection & anomaly telemetry (`FR-006`)
+* Payment recovery prioritization & ERV valuation (`FR-012`, `FR-013`, `FR-014`)
+* Recovery action execution via Razorpay Payment Links (`FR-015`, `FR-018`)
+* Recovery outcome verification & minor-unit ledger state (`FR-021`, `FR-022`)
+* Revenue recovery analytics & Control Tower dashboard (`FR-023`, `FR-024`, `FR-025`)
+* Merchant recovery policies & approval guardrails (`FR-002`, `FR-016`)
+* Immutable audit logging (`FR-031`)
+* Explainable AI decisions (`FR-029`, `FR-030`)
+* Razorpay test-mode integration (`FR-001`, `FR-018`)
 
-## 3.2 Out of Scope
+## 3.2 Deferred Scope (Phase 2 Extensions)
+
+The following loss categories are defined for future system expansion and are deferred beyond the initial MVP:
+
+* Checkout abandonment drop-off (`FR-007`)
+* Failed recurring/subscription payments (`FR-008`)
+* Overdue receivables (`FR-009`)
+
+## 3.3 Out of Scope
 
 The initial version shall not attempt to:
 
