@@ -38,6 +38,7 @@ const baseUrl = process.env.BASE_URL || `http://localhost:${port}`;
 const countArg = process.argv.find((a) => a.startsWith('--count='));
 const totalCount = countArg ? parseInt(countArg.split('=')[1], 10) : 10;
 const isRecoverMode = process.argv.includes('--recover');
+const isFlowMode = process.argv.includes('--flow');
 
 function sendHttpRequest(
   targetUrl: string,
@@ -192,157 +193,121 @@ function getRandomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-async function runBulkSimulation() {
-  const { merchantId, webhookSecret, accessToken } = await resolveMerchantAndSecret();
-  const cleanBase = baseUrl.replace(/\/$/, '');
+async function injectSingleFailure(index: number, total: number, merchantId: string, webhookSecret: string, cleanBase: string): Promise<boolean> {
   const targetEndpoint = `${cleanBase}/api/v1/webhooks/razorpay/${merchantId}`;
+  const scenario = FAILURE_SCENARIOS[index % FAILURE_SCENARIOS.length];
+  const amountPaise = getRandomInt(scenario.minAmount, scenario.maxAmount);
+  const amountRupees = (amountPaise / 100).toFixed(2);
+  const eventId = `evt_sim_${Date.now()}_${index}_${crypto.randomBytes(4).toString('hex')}`;
+  const paymentId = `pay_${crypto.randomBytes(6).toString('hex')}`;
+  const orderId = `order_${crypto.randomBytes(6).toString('hex')}`;
 
-  if (isRecoverMode) {
-    console.log('\n==========================================================================');
-    console.log('  REVENUE RECOVERY ENGINE — AUTOMATED RECOVERY SETTLEMENT SIMULATOR');
-    console.log('==========================================================================');
-
-    try {
-      const headers: Record<string, string> = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
-      const oppsRes = await sendHttpRequest(
-        `${cleanBase}/api/v1/dashboard/opportunities?limit=50`,
-        'GET',
-        undefined,
-        headers,
-      );
-
-      if (oppsRes.statusCode !== 200) {
-        console.error(`✗ Failed to fetch dispatched opportunities: ${oppsRes.body}`);
-        return;
-      }
-
-      const allOpps = JSON.parse(oppsRes.body)?.data?.data || [];
-      const oppsData = allOpps.filter((o: any) => o.status === 'ACTION_DISPATCHED' || o.status === 'PRIORITIZED');
-
-      if (oppsData.length === 0) {
-        console.log('ℹ No open dispatched opportunities found to recover. Run `pnpm simulate` first to generate failure events.');
-        return;
-      }
-
-      console.log(`Found ${oppsData.length} active opportunities. Simulating customer recovery payments...\n`);
-
-      let recoveredCount = 0;
-      for (let i = 0; i < oppsData.length; i++) {
-        const opp = oppsData[i];
-        const eventId = `evt_rec_${Date.now()}_${i + 1}`;
-        const paymentId = `pay_recovered_${crypto.randomBytes(6).toString('hex')}`;
-        const referenceId = opp.lastReferenceId || `${opp.id.substring(0, 24)}_att_1`;
-        const paymentLinkId = opp.lastPaymentLinkId || `plink_${crypto.randomBytes(6).toString('hex')}`;
-
-        const payloadObj = {
-          entity: 'event',
-          account_id: 'acc_sim_recover_99',
-          event: 'payment_link.paid',
-          event_id: eventId,
-          contains: ['payment_link', 'payment'],
-          payload: {
-            payment_link: {
-              entity: {
-                id: paymentLinkId,
-                entity: 'payment_link',
-                amount: opp.amount,
-                amount_paid: opp.amount,
-                status: 'paid',
-                reference_id: referenceId,
-                notes: {
-                  opportunity_id: opp.id,
-                  merchant_id: merchantId,
-                },
-              },
-            },
-            payment: {
-              entity: {
-                id: paymentId,
-                entity: 'payment',
-                amount: opp.amount,
-                currency: opp.currency || 'INR',
-                status: 'captured',
-                method: 'netbanking',
-              },
-            },
-          },
+  const payloadObj = {
+    entity: 'event',
+    account_id: 'acc_sim_live_99',
+    event: 'payment.failed',
+    event_id: eventId,
+    contains: ['payment'],
+    payload: {
+      payment: {
+        entity: {
+          id: paymentId,
+          entity: 'payment',
+          amount: amountPaise,
+          currency: 'INR',
+          status: 'failed',
+          order_id: orderId,
+          method: index % 2 === 0 ? 'card' : 'upi',
+          description: `Automated Recovery Simulation Order #${1000 + index}`,
+          error_code: scenario.code,
+          error_description: scenario.description,
+          error_source: scenario.source,
+          error_step: scenario.step,
+          error_reason: scenario.reason,
           created_at: Math.floor(Date.now() / 1000),
-        };
+        },
+      },
+    },
+    created_at: Math.floor(Date.now() / 1000),
+  };
 
-        const rawBody = JSON.stringify(payloadObj);
-        const signature = crypto
-          .createHmac('sha256', webhookSecret)
-          .update(rawBody)
-          .digest('hex');
+  const rawBody = JSON.stringify(payloadObj);
+  const signature = crypto
+    .createHmac('sha256', webhookSecret)
+    .update(rawBody)
+    .digest('hex');
 
-        const res = await sendHttpRequest(targetEndpoint, 'POST', rawBody, {
-          'X-Razorpay-Signature': signature,
-          'X-Razorpay-Event-Id': eventId,
-        });
+  try {
+    const res = await sendHttpRequest(targetEndpoint, 'POST', rawBody, {
+      'X-Razorpay-Signature': signature,
+      'X-Razorpay-Event-Id': eventId,
+    });
 
-        if (res.statusCode === 200) {
-          recoveredCount++;
-          console.log(`[${i + 1}/${oppsData.length}] ✓ Recovered ₹${(opp.amount / 100).toFixed(2)} | Opportunity ID: ${opp.id} | Status: RECOVERED`);
-        } else {
-          console.log(`[${i + 1}/${oppsData.length}] ✗ Settlement webhook failed: ${res.body}`);
-        }
-
-        await new Promise((r) => setTimeout(r, 150));
-      }
-
-      console.log('\n==========================================================================');
-      console.log(`  RECOVERY SIMULATION COMPLETE: ${recoveredCount}/${oppsData.length} opportunities settled.`);
-      console.log('  Open your local dashboard (http://localhost:5173) and click REFRESH!');
-      console.log('==========================================================================\n');
-      return;
-    } catch (err: any) {
-      console.error(`✗ Error executing recovery settlement: ${err.message}`);
-      return;
+    if (res.statusCode === 200) {
+      console.log(`[${index}/${total}] 🔴 INJECTED FAILURE ₹${amountRupees} | Reason: ${scenario.reason} | Order ID: ${orderId}`);
+      return true;
+    } else {
+      console.log(`[${index}/${total}] ✗ Failed with HTTP ${res.statusCode}: ${res.body}`);
+      return false;
     }
+  } catch (err: any) {
+    console.error(`[${index}/${total}] ✗ Connection error: ${err.message}`);
+    return false;
   }
+}
 
-  console.log('\n==========================================================================');
-  console.log('  REVENUE RECOVERY ENGINE — AUTOMATED BULK SIMULATOR');
-  console.log('==========================================================================');
-  console.log(`  Count to Generate: ${totalCount} simulated events`);
-  console.log(`  Target Backend:    ${baseUrl}`);
-  console.log(`  Merchant ID:       ${merchantId}`);
-  console.log(`  Webhook Secret:    ${webhookSecret}`);
-  console.log('==========================================================================\n');
+async function recoverOpenOpportunities(merchantId: string, webhookSecret: string, accessToken: string, cleanBase: string) {
+  const targetEndpoint = `${cleanBase}/api/v1/webhooks/razorpay/${merchantId}`;
+  const headers: Record<string, string> = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
-  let successCount = 0;
+  const oppsRes = await sendHttpRequest(
+    `${cleanBase}/api/v1/dashboard/opportunities?limit=50`,
+    'GET',
+    undefined,
+    headers,
+  );
 
-  for (let i = 1; i <= totalCount; i++) {
-    const scenario = FAILURE_SCENARIOS[i % FAILURE_SCENARIOS.length];
-    const amountPaise = getRandomInt(scenario.minAmount, scenario.maxAmount);
-    const amountRupees = (amountPaise / 100).toFixed(2);
-    const eventId = `evt_bulk_${Date.now()}_${i}_${crypto.randomBytes(4).toString('hex')}`;
-    const paymentId = `pay_${crypto.randomBytes(6).toString('hex')}`;
-    const orderId = `order_${crypto.randomBytes(6).toString('hex')}`;
+  if (oppsRes.statusCode !== 200) return;
+
+  const allOpps = JSON.parse(oppsRes.body)?.data?.data || [];
+  const oppsData = allOpps.filter((o: any) => o.status === 'ACTION_DISPATCHED' || o.status === 'PRIORITIZED');
+
+  for (let i = 0; i < oppsData.length; i++) {
+    const opp = oppsData[i];
+    const eventId = `evt_rec_${Date.now()}_${i + 1}`;
+    const paymentId = `pay_recovered_${crypto.randomBytes(6).toString('hex')}`;
+    const referenceId = opp.lastReferenceId || `${opp.id.substring(0, 24)}_att_1`;
+    const paymentLinkId = opp.lastPaymentLinkId || `plink_${crypto.randomBytes(6).toString('hex')}`;
 
     const payloadObj = {
       entity: 'event',
-      account_id: 'acc_bulk_sim_99',
-      event: 'payment.failed',
+      account_id: 'acc_sim_recover_99',
+      event: 'payment_link.paid',
       event_id: eventId,
-      contains: ['payment'],
+      contains: ['payment_link', 'payment'],
       payload: {
+        payment_link: {
+          entity: {
+            id: paymentLinkId,
+            entity: 'payment_link',
+            amount: opp.amount,
+            amount_paid: opp.amount,
+            status: 'paid',
+            reference_id: referenceId,
+            notes: {
+              opportunity_id: opp.id,
+              merchant_id: merchantId,
+            },
+          },
+        },
         payment: {
           entity: {
             id: paymentId,
             entity: 'payment',
-            amount: amountPaise,
-            currency: 'INR',
-            status: 'failed',
-            order_id: orderId,
-            method: i % 2 === 0 ? 'card' : 'upi',
-            description: `Automated Simulation Order #${1000 + i}`,
-            error_code: scenario.code,
-            error_description: scenario.description,
-            error_source: scenario.source,
-            error_step: scenario.step,
-            error_reason: scenario.reason,
-            created_at: Math.floor(Date.now() / 1000),
+            amount: opp.amount,
+            currency: opp.currency || 'INR',
+            status: 'captured',
+            method: 'netbanking',
           },
         },
       },
@@ -355,33 +320,64 @@ async function runBulkSimulation() {
       .update(rawBody)
       .digest('hex');
 
-    try {
-      const res = await sendHttpRequest(targetEndpoint, 'POST', rawBody, {
-        'X-Razorpay-Signature': signature,
-        'X-Razorpay-Event-Id': eventId,
-      });
+    const res = await sendHttpRequest(targetEndpoint, 'POST', rawBody, {
+      'X-Razorpay-Signature': signature,
+      'X-Razorpay-Event-Id': eventId,
+    });
 
-      if (res.statusCode === 200) {
-        successCount++;
-        console.log(
-          `[${i}/${totalCount}] ✓ Generated ₹${amountRupees} failure | Reason: ${scenario.reason} | Event ID: ${eventId}`,
-        );
-      } else {
-        console.log(`[${i}/${totalCount}] ✗ Failed with HTTP ${res.statusCode}: ${res.body}`);
-      }
-    } catch (err: any) {
-      console.error(`[${i}/${totalCount}] ✗ Connection error: ${err.message}`);
+    if (res.statusCode === 200) {
+      console.log(`🟢 RECOVERED PAYMENT ₹${(opp.amount / 100).toFixed(2)} | Opportunity: ${opp.id.substring(0, 16)}... | Status: RECOVERED`);
+    }
+  }
+}
+
+async function runSimulation() {
+  const { merchantId, webhookSecret, accessToken } = await resolveMerchantAndSecret();
+  const cleanBase = baseUrl.replace(/\/$/, '');
+
+  if (isFlowMode) {
+    console.log('\n==========================================================================');
+    console.log('  REVENUE RECOVERY ENGINE — REAL-TIME CONCURRENT FLOW SIMULATOR');
+    console.log('  Simulating continuous real-world stream: Payment Failures & AI Recoveries');
+    console.log('==========================================================================\n');
+
+    for (let i = 1; i <= totalCount; i++) {
+      console.log(`--- [Cycle ${i}/${totalCount}] ---`);
+      await injectSingleFailure(i, totalCount, merchantId, webhookSecret, cleanBase);
+      await new Promise((r) => setTimeout(r, 600));
+      await recoverOpenOpportunities(merchantId, webhookSecret, accessToken, cleanBase);
+      await new Promise((r) => setTimeout(r, 600));
     }
 
-    // 400ms delay between events to allow clean outbound Razorpay API calls
-    await new Promise((r) => setTimeout(r, 400));
+    console.log('\n==========================================================================');
+    console.log('  REAL-TIME FLOW SIMULATION COMPLETE: All failures and recoveries processed.');
+    console.log('  Open your local dashboard (http://localhost:5173) and click REFRESH!');
+    console.log('==========================================================================\n');
+    return;
+  }
+
+  if (isRecoverMode) {
+    console.log('\n==========================================================================');
+    console.log('  REVENUE RECOVERY ENGINE — AUTOMATED RECOVERY SETTLEMENT SIMULATOR');
+    console.log('==========================================================================');
+    await recoverOpenOpportunities(merchantId, webhookSecret, accessToken, cleanBase);
+    console.log('\n==========================================================================');
+    console.log('  RECOVERY SIMULATION COMPLETE. Refresh your dashboard (http://localhost:5173)');
+    console.log('==========================================================================\n');
+    return;
   }
 
   console.log('\n==========================================================================');
-  console.log(`  SIMULATION COMPLETE: ${successCount}/${totalCount} events injected successfully.`);
-  console.log('  To simulate customer automated payment recoveries, run: pnpm simulate:recover');
-  console.log('  Open your local dashboard (http://localhost:5173) and click REFRESH!');
+  console.log('  REVENUE RECOVERY ENGINE — AUTOMATED FAILURE SIMULATOR');
+  console.log('==========================================================================');
+  for (let i = 1; i <= totalCount; i++) {
+    await injectSingleFailure(i, totalCount, merchantId, webhookSecret, cleanBase);
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  console.log('\n==========================================================================');
+  console.log('  FAILURE SIMULATION COMPLETE: To recover open opportunities, run: pnpm simulate:recover');
+  console.log('  Or to run real-time concurrent stream, run: pnpm simulate:flow');
   console.log('==========================================================================\n');
 }
 
-runBulkSimulation();
+runSimulation();

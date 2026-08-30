@@ -8,6 +8,7 @@ describe('TaxonomyMapper', () => {
       recoverabilityClass: 'TEMPORARY',
       recoveryProbability: 0.75,
       causeConfidence: 0.95,
+      strategy: '1-Click Pre-Filled 3DS Re-Authentication',
     });
   });
 
@@ -18,6 +19,7 @@ describe('TaxonomyMapper', () => {
       recoverabilityClass: 'CUSTOMER_ACTION_REQUIRED',
       recoveryProbability: 0.6,
       causeConfidence: 0.9,
+      strategy: 'Partial Payment & Flexible Schedule Auth',
     });
   });
 
@@ -28,6 +30,7 @@ describe('TaxonomyMapper', () => {
       recoverabilityClass: 'UNRECOVERABLE',
       recoveryProbability: 0.0,
       causeConfidence: 0.99,
+      strategy: 'Hard Decline Policy Guard (Unrecoverable)',
     });
   });
 
@@ -38,6 +41,7 @@ describe('TaxonomyMapper', () => {
       recoverabilityClass: 'UNKNOWN',
       recoveryProbability: 0.3,
       causeConfidence: 0.5,
+      strategy: 'Manual Recon Audit & Policy Review',
     });
   });
 });

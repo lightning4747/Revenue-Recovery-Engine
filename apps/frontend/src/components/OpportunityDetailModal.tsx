@@ -17,17 +17,19 @@ const formatINR = (paise: number) => {
   }).format(paise / 100);
 };
 
-const causeDetailsMap: Record<string, { label: string; explanation: string; probability: string; color: string; bg: string }> = {
+const causeDetailsMap: Record<string, { label: string; explanation: string; strategy: string; probability: string; color: string; bg: string }> = {
   CUSTOMER_AUTH_TIMEOUT: {
     label: 'Customer Auth Timeout (3DS OTP Delay)',
-    explanation: 'Payment authorization timed out waiting for customer 3DS OTP entry. High recovery potential via payment link.',
-    probability: '70% Recovery Confidence',
+    explanation: 'Payment authorization timed out waiting for customer 3DS OTP entry.',
+    strategy: '1-Click Pre-Filled 3DS Re-Authentication',
+    probability: '75% Recovery Confidence',
     color: '#2160d5',
     bg: '#eff6ff',
   },
   INSUFFICIENT_FUNDS: {
     label: 'Insufficient Account Balance',
     explanation: 'Issuing bank declined transaction due to insufficient account balance at time of authorization.',
+    strategy: 'Partial Payment & Flexible Schedule Auth',
     probability: '60% Recovery Confidence',
     color: '#9333ea',
     bg: '#f3e8ff',
@@ -35,6 +37,7 @@ const causeDetailsMap: Record<string, { label: string; explanation: string; prob
   BANK_TECHNICAL_OUTAGE: {
     label: 'Issuing Bank Core Outage',
     explanation: 'Core banking network of the issuing bank was temporarily offline during authorization request.',
+    strategy: 'Issuing Bank Telemetry Monitoring & Smart Retry',
     probability: '80% Recovery Confidence',
     color: '#d97706',
     bg: '#fffbeb',
@@ -42,6 +45,7 @@ const causeDetailsMap: Record<string, { label: string; explanation: string; prob
   NETWORK_TIMEOUT: {
     label: 'Gateway Latency Timeout',
     explanation: 'Acquiring payment gateway experienced network latency exceeding the 5000ms SLA threshold.',
+    strategy: 'Acquiring Gateway Reroute & Instant Re-Trigger',
     probability: '65% Recovery Confidence',
     color: '#2563eb',
     bg: '#eff6ff',
@@ -49,6 +53,7 @@ const causeDetailsMap: Record<string, { label: string; explanation: string; prob
   CARD_INVALID: {
     label: 'Card Invalid / Hard Decline',
     explanation: 'Invalid card number or stolen card flag reported by issuing card network. Unrecoverable failure.',
+    strategy: 'Hard Decline Policy Guard (Unrecoverable)',
     probability: '0% Recovery Confidence (Unrecoverable)',
     color: '#dc2626',
     bg: '#fef2f2',
@@ -166,6 +171,15 @@ export const OpportunityDetailModal: React.FC<Props> = ({ opportunity, onClose, 
           <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.8125rem', color: 'var(--rzp-text-secondary)', lineHeight: 1.5 }}>
             {causeInfo.explanation}
           </p>
+
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '0.375rem', padding: '0.625rem 0.875rem', border: `1px solid ${causeInfo.color}44`, marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--rzp-text-secondary)', textTransform: 'uppercase' }}>
+              AI Automated Solution Strategy:
+            </span>
+            <div style={{ fontSize: '0.875rem', fontWeight: 700, color: causeInfo.color, marginTop: '0.125rem' }}>
+              🎯 {causeInfo.strategy}
+            </div>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.75rem', fontWeight: 600 }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: causeInfo.color }}>
               <BarChart2 size={14} /> {causeInfo.probability}

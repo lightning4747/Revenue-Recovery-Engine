@@ -9,6 +9,7 @@ export interface DiagnosisTaxonomy {
     | 'UNKNOWN';
   recoveryProbability: number;
   causeConfidence: number;
+  strategy: string;
 }
 
 export class TaxonomyMapper {
@@ -33,6 +34,7 @@ export class TaxonomyMapper {
         recoverabilityClass: 'UNRECOVERABLE',
         recoveryProbability: 0.0,
         causeConfidence: 0.99,
+        strategy: 'Hard Decline Policy Guard (Unrecoverable)',
       };
     }
 
@@ -48,6 +50,7 @@ export class TaxonomyMapper {
         recoverabilityClass: 'TEMPORARY',
         recoveryProbability: 0.75,
         causeConfidence: 0.95,
+        strategy: '1-Click Pre-Filled 3DS Re-Authentication',
       };
     }
 
@@ -62,6 +65,7 @@ export class TaxonomyMapper {
         recoverabilityClass: 'CUSTOMER_ACTION_REQUIRED',
         recoveryProbability: 0.6,
         causeConfidence: 0.9,
+        strategy: 'Partial Payment & Flexible Schedule Auth',
       };
     }
 
@@ -72,6 +76,7 @@ export class TaxonomyMapper {
         recoverabilityClass: 'TEMPORARY',
         recoveryProbability: 0.65,
         causeConfidence: 0.8,
+        strategy: 'Acquiring Gateway Reroute & Instant Re-Trigger',
       };
     }
 
@@ -88,6 +93,7 @@ export class TaxonomyMapper {
         recoverabilityClass: 'BANK_GATEWAY_FAILURE',
         recoveryProbability: 0.7,
         causeConfidence: 0.85,
+        strategy: 'Issuing Bank Telemetry Monitoring & Smart Retry',
       };
     }
 
@@ -97,6 +103,7 @@ export class TaxonomyMapper {
       recoverabilityClass: 'UNKNOWN',
       recoveryProbability: 0.3,
       causeConfidence: 0.5,
+      strategy: 'Manual Recon Audit & Policy Review',
     };
   }
 }
