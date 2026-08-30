@@ -9,6 +9,8 @@
     "test": "pnpm --filter backend test",
     "test:e2e": "pnpm --filter backend test:e2e",
     "tunnel": "pnpm --filter backend tunnel",
+    "clean:db": "pnpm --filter backend clean:db",
+    "db:clean": "pnpm --filter backend clean:db",
     "simulate": "pnpm --filter backend simulate",
     "simulate:recover": "pnpm --filter backend simulate:recover",
     "webhook:test": "pnpm --filter backend webhook:test",
