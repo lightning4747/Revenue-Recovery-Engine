@@ -1,21 +1,18 @@
 import { useEffect, useState, useCallback } from 'react';
 import { AuditTrailItem, DashboardSummary, Opportunity } from './types';
 import { fetchAuditTrail, fetchOpportunities, fetchSummary } from './services/api';
-import { Topbar } from './components/Topbar';
-import { Sidebar } from './components/Sidebar';
+import { HeaderBanner } from './components/HeaderBanner';
 import { ExecutiveSummaryCards } from './components/ExecutiveSummaryCards';
 import { OpportunityQueueTable } from './components/OpportunityQueueTable';
 import { OpportunityDetailModal } from './components/OpportunityDetailModal';
 import { AuditTimelineModal } from './components/AuditTimelineModal';
 import { MerchantPolicyModal } from './components/MerchantPolicyModal';
 import { LoginModal } from './components/LoginModal';
-import { FloatingHelpButton } from './components/FloatingHelpButton';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
     Boolean(localStorage.getItem('rre_token')),
   );
-  const [activeNav, setActiveNav] = useState<string>('queue');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -53,13 +50,6 @@ export default function App() {
     loadData();
   }, [loadData]);
 
-  const handleNavSelect = (nav: string) => {
-    setActiveNav(nav);
-    if (nav === 'policy') {
-      setIsPolicyModalOpen(true);
-    }
-  };
-
   const handleStatusChange = (newStatus: string) => {
     setSelectedStatus(newStatus);
     setPage(1);
@@ -89,39 +79,23 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--rzp-bg)', color: 'var(--rzp-text-primary)' }}>
-      {/* Topbar Header */}
-      <Topbar onLogout={handleLogout} onOpenPolicyModal={() => setIsPolicyModalOpen(true)} />
+      {/* Top Header Banner */}
+      <HeaderBanner onLogout={handleLogout} onOpenPolicyModal={() => setIsPolicyModalOpen(true)} />
 
-      {/* Sidebar Navigation */}
-      <Sidebar activeNav={activeNav} onNavSelect={handleNavSelect} />
-
-      {/* Scrollable Main Viewport */}
-      <main
-        style={{
-          marginLeft: '224px',
-          marginTop: '56px',
-          padding: '2rem',
-          minHeight: 'calc(100vh - 56px)',
-          backgroundColor: 'var(--rzp-bg)',
-        }}
-      >
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <ExecutiveSummaryCards summary={summary} loading={loadingSummary} onRefresh={loadData} />
-          <OpportunityQueueTable
-            opportunities={opportunities}
-            total={total}
-            page={page}
-            selectedStatus={selectedStatus}
-            onStatusChange={handleStatusChange}
-            onPageChange={setPage}
-            onSelectOpportunity={setSelectedOpportunity}
-            onOpenAuditModal={handleOpenAuditModal}
-          />
-        </div>
+      {/* Main Centered Container */}
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+        <ExecutiveSummaryCards summary={summary} loading={loadingSummary} onRefresh={loadData} />
+        <OpportunityQueueTable
+          opportunities={opportunities}
+          total={total}
+          page={page}
+          selectedStatus={selectedStatus}
+          onStatusChange={handleStatusChange}
+          onPageChange={setPage}
+          onSelectOpportunity={setSelectedOpportunity}
+          onOpenAuditModal={handleOpenAuditModal}
+        />
       </main>
-
-      {/* RRE Engine Status Indicator */}
-      <FloatingHelpButton />
 
       {/* Dialog Modals */}
       <OpportunityDetailModal

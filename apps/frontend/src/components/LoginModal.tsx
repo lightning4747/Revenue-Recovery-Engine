@@ -81,7 +81,7 @@ export const LoginModal: React.FC<Props> = ({ onSuccess }) => {
             {isRegistering ? 'Create Merchant Account' : 'Merchant Sign In'}
           </h2>
           <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8125rem', color: '#94a3b8' }}>
-            {isRegistering ? 'Register to manage revenue recovery' : 'Revenue Recovery Engine Control Tower'}
+            {isRegistering ? 'Register to manage revenue recovery' : 'Revenue Recovery Engine Dashboard'}
           </p>
         </div>
 
