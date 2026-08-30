@@ -75,7 +75,7 @@ export class PaymentLinkActionService {
           payload,
         );
       } catch (apiErr: any) {
-        if (credentials.keyId.startsWith('rzp_test_')) {
+        if (process.env.ENABLE_MOCK_FALLBACK === 'true') {
           this.logger.warn(
             `RAZORPAY_TEST_MODE_FALLBACK: Razorpay API call failed (${apiErr?.message}). Generating test mode launch link.`,
           );
@@ -85,6 +85,9 @@ export class PaymentLinkActionService {
             reference_id: referenceId,
           };
         } else {
+          this.logger.error(
+            `RAZORPAY_API_CALL_FAILED: API request failed for reference_id ${referenceId}: ${apiErr?.message}`,
+          );
           throw apiErr;
         }
       }
