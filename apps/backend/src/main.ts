@@ -12,6 +12,7 @@ async function bootstrap() {
     bufferLogs: true,
   });
 
+  app.enableCors({ origin: true, credentials: true });
   app.useLogger(app.get(Logger));
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalFilters(new GlobalExceptionFilter());
