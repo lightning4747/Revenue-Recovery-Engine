@@ -10,6 +10,7 @@
     "test:e2e": "pnpm --filter backend test:e2e",
     "tunnel": "pnpm --filter backend tunnel",
     "simulate": "pnpm --filter backend simulate",
+    "simulate:recover": "pnpm --filter backend simulate:recover",
     "webhook:test": "pnpm --filter backend webhook:test",
     "webhook:test:invalid": "pnpm --filter backend webhook:test:invalid",
     "webhook:test:duplicate": "pnpm --filter backend webhook:test:duplicate",

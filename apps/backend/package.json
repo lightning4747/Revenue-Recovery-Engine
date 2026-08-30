@@ -18,6 +18,7 @@
     "db:studio": "drizzle-kit studio",
     "tunnel": "bash scripts/zrok-tunnel.sh",
     "simulate": "ts-node scripts/simulate-failures.ts",
+    "simulate:recover": "ts-node scripts/simulate-failures.ts --recover",
     "webhook:test": "ts-node scripts/test-webhook.ts",
     "webhook:test:invalid": "ts-node scripts/test-webhook.ts --scenario=invalid-signature",
     "webhook:test:duplicate": "ts-node scripts/test-webhook.ts --scenario=duplicate",
