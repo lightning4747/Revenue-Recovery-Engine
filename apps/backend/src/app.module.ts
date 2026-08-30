@@ -8,6 +8,17 @@ import { EventsModule } from './events/events.module';
 import { HealthModule } from './health/health.module';
 import { MerchantModule } from './merchant/merchant.module';
 import { WebhooksModule } from './razorpay/webhooks/webhooks.module';
+import { DetectionModule } from './revenue/detection/detection.module';
+import { DiagnosisModule } from './revenue/diagnosis/diagnosis.module';
+import { ValuationModule } from './revenue/valuation/valuation.module';
+import { AiExplanationModule } from './revenue/ai/ai-explanation.module';
+import { OpportunityStateModule } from './recovery/state/opportunity-state.module';
+import { PrioritizationModule } from './recovery/prioritization/prioritization.module';
+import { PolicyModule } from './recovery/policy/policy.module';
+
+import { PaymentLinksModule } from './razorpay/payment-links/payment-links.module';
+import { VerificationModule } from './recovery/verification/verification.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -29,6 +40,16 @@ import { WebhooksModule } from './razorpay/webhooks/webhooks.module';
     MerchantModule,
     WebhooksModule,
     EventsModule,
+    DetectionModule,
+    DiagnosisModule,
+    ValuationModule,
+    AiExplanationModule,
+    OpportunityStateModule,
+    PrioritizationModule,
+    PolicyModule,
+    PaymentLinksModule,
+    VerificationModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}

@@ -1,12 +1,16 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { eq } from 'drizzle-orm';
 import { DRIZZLE_DB, DrizzleDb } from '../../database/database.provider';
 import * as schema from '../../database/schema';
+import { DetectionService } from '../../revenue/detection/detection.service';
+
+import { OutcomeVerificationService } from '../../recovery/verification/outcome-verification.service';
 
 export interface WebhookJobData {
   eventId: string;
+  merchantId?: string;
 }
 
 @Processor('webhookQueue')
@@ -14,7 +18,11 @@ export interface WebhookJobData {
 export class WebhookEventsProcessor extends WorkerHost {
   private readonly logger = new Logger(WebhookEventsProcessor.name);
 
-  constructor(@Inject(DRIZZLE_DB) private readonly db: DrizzleDb) {
+  constructor(
+    @Inject(DRIZZLE_DB) private readonly db: DrizzleDb,
+    @Optional() private readonly detectionService?: DetectionService,
+    @Optional() private readonly outcomeVerificationService?: OutcomeVerificationService,
+  ) {
     super();
   }
 
@@ -37,6 +45,7 @@ export class WebhookEventsProcessor extends WorkerHost {
     }
 
     const event = events[0];
+    const merchantId = job.data?.merchantId || (event as any).merchantId || '';
 
     // 2. Layer 2 Worker Idempotency Check: if already PROCESSED, skip execution
     if (event.processingStatus === 'PROCESSED') {
@@ -53,10 +62,28 @@ export class WebhookEventsProcessor extends WorkerHost {
       .where(eq(schema.webhookEvents.id, eventId));
 
     try {
-      // 4. Domain Processing Pipeline (Stub/placeholder handler for Phase 05)
+      // 4. Domain Processing Pipeline
       this.logger.log(
         `WORKER_PROCESSING_EVENT: Processing event ${eventId} (${event.eventType})`,
       );
+
+      if (event.eventType.startsWith('payment_link.')) {
+        if (this.outcomeVerificationService) {
+          await this.outcomeVerificationService.processPaymentLinkEvent(
+            merchantId,
+            event.eventType,
+            event.payload as Record<string, any>,
+          );
+        }
+      } else if (this.detectionService) {
+        await this.detectionService.processEvent({
+          id: event.id,
+          merchantId,
+          providerEventId: event.providerEventId,
+          eventType: event.eventType,
+          payload: event.payload as Record<string, any>,
+        });
+      }
 
       // 5. Update processingStatus -> 'PROCESSED' with processedAt timestamp
       const now = new Date().toISOString();

@@ -14,6 +14,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json --forceExit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "tunnel": "bash scripts/zrok-tunnel.sh",
     "webhook:test": "ts-node scripts/test-webhook.ts",
@@ -22,6 +23,8 @@
     "webhook:test:malformed": "ts-node scripts/test-webhook.ts --scenario=malformed-json"
   },
   "dependencies": {
+    "@google/genai": "^2.19.0",
+    "@nestjs/axios": "^4.0.1",
     "@nestjs/bullmq": "^11.0.5",
     "@nestjs/common": "^11.2.1",
     "@nestjs/config": "^4.0.4",
@@ -29,7 +32,9 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.2.1",
+    "@nestjs/schedule": "^5.0.1",
     "@types/ioredis": "^5.0.0",
+    "axios": "^1.20.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^6.2.0",
     "class-transformer": "^0.5.1",
