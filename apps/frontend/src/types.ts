@@ -37,3 +37,16 @@ export interface AuditTrailItem {
   userExplanation: string | null;
   timestamp: string;
 }
+
+export interface MerchantPolicy {
+  merchantId?: string;
+  minRecoveryAmountPaise: number;
+  maxRetryCount: number;
+  autoExecutionEnabled: boolean;
+}
+
+export interface MerchantCredentials {
+  keyId?: string;
+  hasKeySecret?: boolean;
+  hasWebhookSecret?: boolean;
+}

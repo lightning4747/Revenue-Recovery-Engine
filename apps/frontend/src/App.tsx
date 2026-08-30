@@ -7,6 +7,7 @@ import { ExecutiveSummaryCards } from './components/ExecutiveSummaryCards';
 import { OpportunityQueueTable } from './components/OpportunityQueueTable';
 import { OpportunityDetailModal } from './components/OpportunityDetailModal';
 import { AuditTimelineModal } from './components/AuditTimelineModal';
+import { MerchantPolicyModal } from './components/MerchantPolicyModal';
 import { LoginModal } from './components/LoginModal';
 import { FloatingHelpButton } from './components/FloatingHelpButton';
 
@@ -14,7 +15,8 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
     Boolean(localStorage.getItem('rre_token')),
   );
-  const [activeNav, setActiveNav] = useState<string>('orders');
+  const [activeNav, setActiveNav] = useState<string>('queue');
+  const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [total, setTotal] = useState<number>(0);
@@ -24,6 +26,7 @@ export default function App() {
   const [auditOppId, setAuditOppId] = useState<string | null>(null);
   const [auditTrail, setAuditTrail] = useState<AuditTrailItem[]>([]);
   const [loadingAudit, setLoadingAudit] = useState<boolean>(false);
+  const [isPolicyModalOpen, setIsPolicyModalOpen] = useState<boolean>(false);
 
   const loadData = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -31,7 +34,7 @@ export default function App() {
     try {
       const [sumData, oppData] = await Promise.all([
         fetchSummary(),
-        fetchOpportunities(page, 20),
+        fetchOpportunities(page, 20, selectedStatus),
       ]);
       setSummary(sumData);
       setOpportunities(oppData.data || []);
@@ -44,11 +47,23 @@ export default function App() {
     } finally {
       setLoadingSummary(false);
     }
-  }, [isAuthenticated, page]);
+  }, [isAuthenticated, page, selectedStatus]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const handleNavSelect = (nav: string) => {
+    setActiveNav(nav);
+    if (nav === 'policy') {
+      setIsPolicyModalOpen(true);
+    }
+  };
+
+  const handleStatusChange = (newStatus: string) => {
+    setSelectedStatus(newStatus);
+    setPage(1);
+  };
 
   const handleOpenAuditModal = async (oppId: string) => {
     setAuditOppId(oppId);
@@ -74,11 +89,11 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--rzp-bg)', color: 'var(--rzp-text-primary)' }}>
-      {/* Topbar Navigation Header (Fixed h-14 #151928) */}
-      <Topbar onLogout={handleLogout} activeTab={activeNav === 'orders' ? 'orders' : 'payments'} onTabChange={setActiveNav} />
+      {/* Topbar Header */}
+      <Topbar onLogout={handleLogout} onOpenPolicyModal={() => setIsPolicyModalOpen(true)} />
 
-      {/* Sidebar Navigation Bar (Fixed w-56 #f4f5f8) */}
-      <Sidebar activeNav={activeNav} onNavSelect={setActiveNav} />
+      {/* Sidebar Navigation */}
+      <Sidebar activeNav={activeNav} onNavSelect={handleNavSelect} />
 
       {/* Scrollable Main Viewport */}
       <main
@@ -96,6 +111,8 @@ export default function App() {
             opportunities={opportunities}
             total={total}
             page={page}
+            selectedStatus={selectedStatus}
+            onStatusChange={handleStatusChange}
             onPageChange={setPage}
             onSelectOpportunity={setSelectedOpportunity}
             onOpenAuditModal={handleOpenAuditModal}
@@ -103,7 +120,7 @@ export default function App() {
         </div>
       </main>
 
-      {/* Floating Support Button */}
+      {/* RRE Engine Status Indicator */}
       <FloatingHelpButton />
 
       {/* Dialog Modals */}
@@ -117,6 +134,10 @@ export default function App() {
         auditTrail={auditTrail}
         loading={loadingAudit}
         onClose={() => setAuditOppId(null)}
+      />
+      <MerchantPolicyModal
+        isOpen={isPolicyModalOpen}
+        onClose={() => setIsPolicyModalOpen(false)}
       />
     </div>
   );

@@ -32,26 +32,6 @@ export const ExecutiveSummaryCards: React.FC<Props> = ({ summary, loading, onRef
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {/* Date Selector Dropdown Pill */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              backgroundColor: '#ffffff',
-              border: '1px solid var(--rzp-border)',
-              borderRadius: '0.375rem',
-              padding: '0.5rem 0.875rem',
-              fontSize: '0.8125rem',
-              color: 'var(--rzp-text-primary)',
-              fontWeight: 500,
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-            }}
-          >
-            <Calendar size={14} color="var(--rzp-text-secondary)" />
-            Past 30 Days
-          </div>
-
           <button
             onClick={onRefresh}
             disabled={loading}

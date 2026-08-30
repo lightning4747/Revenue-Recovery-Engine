@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AuditTrailItem, DashboardSummary, Opportunity } from '../types';
+import { AuditTrailItem, DashboardSummary, MerchantCredentials, MerchantPolicy, Opportunity } from '../types';
 
 const api = axios.create({
   baseURL: '/api/v1',
@@ -46,7 +46,7 @@ export const fetchOpportunities = async (
   status?: string,
 ): Promise<{ data: Opportunity[]; total: number }> => {
   const params: Record<string, any> = { page, limit };
-  if (status) params.status = status;
+  if (status && status !== 'ALL') params.status = status;
   const res = await api.get('/dashboard/opportunities', { params });
   return res.data?.data || res.data;
 };
@@ -64,4 +64,23 @@ export const approveOpportunity = async (opportunityId: string): Promise<Opportu
 export const triggerRecovery = async (opportunityId: string): Promise<Opportunity> => {
   const res = await api.post(`/dashboard/opportunities/${opportunityId}/recover`);
   return res.data?.data || res.data;
+};
+
+export const fetchPolicy = async (): Promise<MerchantPolicy> => {
+  const res = await api.get('/merchant/policy');
+  return res.data?.data || res.data;
+};
+
+export const updatePolicy = async (policy: Partial<MerchantPolicy>): Promise<MerchantPolicy> => {
+  const res = await api.patch('/merchant/policy', policy);
+  return res.data?.data || res.data;
+};
+
+export const fetchCredentials = async (): Promise<MerchantCredentials> => {
+  const res = await api.get('/merchant/credentials');
+  return res.data?.data || res.data;
+};
+
+export const updateCredentials = async (credentials: { keyId: string; keySecret: string; webhookSecret: string }): Promise<void> => {
+  await api.put('/merchant/credentials', credentials);
 };

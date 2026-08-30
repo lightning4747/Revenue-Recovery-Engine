@@ -1,13 +1,12 @@
 import React from 'react';
-import { ShieldCheck, Search, Bell, LogOut, Terminal, QrCode } from 'lucide-react';
+import { ShieldCheck, LogOut, Sliders } from 'lucide-react';
 
 interface Props {
   onLogout: () => void;
-  activeTab?: string;
-  onTabChange?: (tab: string) => void;
+  onOpenPolicyModal: () => void;
 }
 
-export const Topbar: React.FC<Props> = ({ onLogout, activeTab = 'payments', onTabChange }) => {
+export const Topbar: React.FC<Props> = ({ onLogout, onOpenPolicyModal }) => {
   return (
     <header
       style={{
@@ -26,77 +25,17 @@ export const Topbar: React.FC<Props> = ({ onLogout, activeTab = 'payments', onTa
         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
       }}
     >
-      {/* Left Branding & Navigation */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-          <ShieldCheck size={24} color="#2160d5" style={{ fill: '#2160d5', stroke: '#ffffff' }} />
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.375rem' }}>
-            <span style={{ fontSize: '1.25rem', fontWeight: 800, fontStyle: 'italic', letterSpacing: '-0.5px' }}>
-              Razorpay
-            </span>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Revenue Recovery
-            </span>
-          </div>
+      {/* Left Branding */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <ShieldCheck size={26} color="#2160d5" style={{ fill: '#2160d5', stroke: '#ffffff' }} />
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+          <span style={{ fontSize: '1.25rem', fontWeight: 800, fontStyle: 'italic', letterSpacing: '-0.5px' }}>
+            Razorpay
+          </span>
+          <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Revenue Recovery Control Tower
+          </span>
         </div>
-
-        {/* Navigation Links */}
-        <nav style={{ display: 'flex', gap: '1.5rem', height: '56px' }}>
-          <button
-            onClick={() => onTabChange && onTabChange('payments')}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: activeTab === 'payments' ? '#ffffff' : '#94a3b8',
-              fontWeight: activeTab === 'payments' ? 600 : 400,
-              fontSize: '0.875rem',
-              display: 'flex',
-              alignItems: 'center',
-              cursor: 'pointer',
-              borderBottom: activeTab === 'payments' ? '2px solid var(--rzp-blue)' : '2px solid transparent',
-              padding: '0 0.25rem',
-              transition: 'all 0.2s',
-            }}
-          >
-            Payments
-          </button>
-          <button
-            onClick={() => onTabChange && onTabChange('orders')}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: activeTab === 'orders' ? '#ffffff' : '#94a3b8',
-              fontWeight: activeTab === 'orders' ? 600 : 400,
-              fontSize: '0.875rem',
-              display: 'flex',
-              alignItems: 'center',
-              cursor: 'pointer',
-              borderBottom: activeTab === 'orders' ? '2px solid var(--rzp-blue)' : '2px solid transparent',
-              padding: '0 0.25rem',
-              transition: 'all 0.2s',
-            }}
-          >
-            Recovery Opportunities
-          </button>
-          <button
-            onClick={() => onTabChange && onTabChange('policy')}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: activeTab === 'policy' ? '#ffffff' : '#94a3b8',
-              fontWeight: activeTab === 'policy' ? 600 : 400,
-              fontSize: '0.875rem',
-              display: 'flex',
-              alignItems: 'center',
-              cursor: 'pointer',
-              borderBottom: activeTab === 'policy' ? '2px solid var(--rzp-blue)' : '2px solid transparent',
-              padding: '0 0.25rem',
-              transition: 'all 0.2s',
-            }}
-          >
-            Merchant Policy
-          </button>
-        </nav>
       </div>
 
       {/* Centered Test Mode Badge Pill */}
@@ -112,82 +51,47 @@ export const Topbar: React.FC<Props> = ({ onLogout, activeTab = 'payments', onTa
           padding: '0.25rem 1rem',
           display: 'flex',
           alignItems: 'center',
-          gap: '0.75rem',
+          gap: '0.5rem',
           border: '1px solid #374151',
           borderTop: 'none',
           boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e', display: 'inline-block' }} />
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px', color: '#e5e7eb' }}>
-            TEST MODE
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderLeft: '1px solid #374151', paddingLeft: '0.75rem', color: '#9ca3af' }}>
-          <span title="Scan QR" style={{ display: 'inline-flex', cursor: 'pointer' }}>
-            <QrCode size={14} />
-          </span>
-          <span title="Developer Logs" style={{ display: 'inline-flex', cursor: 'pointer' }}>
-            <Terminal size={14} />
-          </span>
-        </div>
+        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e', display: 'inline-block' }} />
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px', color: '#e5e7eb' }}>
+          TEST MODE ENABLED
+        </span>
       </div>
 
-      {/* Right Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        {/* Global Search Input */}
-        <div
-          style={{
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center',
-            backgroundColor: '#1f2937',
-            borderRadius: '0.375rem',
-            padding: '0.375rem 0.75rem',
-            width: '240px',
-            border: '1px solid #374151',
-          }}
-        >
-          <Search size={16} color="#9ca3af" style={{ marginRight: '0.5rem' }} />
-          <input
-            type="text"
-            placeholder="Search Opportunities (Cmd+K)"
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#ffffff',
-              fontSize: '0.8125rem',
-              outline: 'none',
-              width: '100%',
-            }}
-          />
-        </div>
-
+      {/* Right Controls: Policy Configuration & Sign Out */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <button
+          onClick={onOpenPolicyModal}
           style={{
-            background: 'none',
-            border: 'none',
-            color: '#9ca3af',
-            cursor: 'pointer',
-            padding: '0.375rem',
-            borderRadius: '0.25rem',
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
+            gap: '0.375rem',
+            padding: '0.375rem 0.875rem',
+            backgroundColor: '#1f2937',
+            color: '#38bdf8',
+            border: '1px solid #374151',
+            borderRadius: '0.375rem',
+            cursor: 'pointer',
+            fontSize: '0.8125rem',
+            fontWeight: 600,
+            transition: 'background 0.2s',
           }}
-          title="Notifications"
         >
-          <Bell size={18} />
+          <Sliders size={14} /> Merchant Policy
         </button>
 
-        {/* User Account / Sign Out */}
         <button
           onClick={onLogout}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.375rem',
-            padding: '0.375rem 0.75rem',
+            padding: '0.375rem 0.875rem',
             backgroundColor: '#1f2937',
             color: '#e5e7eb',
             border: '1px solid #374151',

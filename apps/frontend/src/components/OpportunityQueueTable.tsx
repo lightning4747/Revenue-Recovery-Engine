@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Opportunity } from '../types';
-import { ExternalLink, History, Eye, Search, Filter, CheckCircle2, Clock, AlertTriangle, Send, TrendingUp } from 'lucide-react';
+import { ExternalLink, History, Eye, CheckCircle2, Clock, AlertTriangle, Send, TrendingUp } from 'lucide-react';
 
 interface Props {
   opportunities: Opportunity[];
   total: number;
   page: number;
+  selectedStatus: string;
+  onStatusChange: (status: string) => void;
   onPageChange: (newPage: number) => void;
   onSelectOpportunity: (opp: Opportunity) => void;
   onOpenAuditModal: (oppId: string) => void;
@@ -36,13 +38,12 @@ export const OpportunityQueueTable: React.FC<Props> = ({
   opportunities,
   total,
   page,
+  selectedStatus,
+  onStatusChange,
   onPageChange,
   onSelectOpportunity,
   onOpenAuditModal,
 }) => {
-  const [selectedStatusTab, setSelectedStatusTab] = useState<string>('ALL');
-  const [searchTerm, setSearchTerm] = useState<string>('');
-
   const statusTabs = [
     { id: 'ALL', label: 'All Opportunities' },
     { id: 'PRIORITIZED', label: 'Prioritized' },
@@ -50,22 +51,8 @@ export const OpportunityQueueTable: React.FC<Props> = ({
     { id: 'PARTIALLY_RECOVERED', label: 'Partially Paid' },
     { id: 'RECOVERED', label: 'Captured' },
     { id: 'POLICY_BLOCKED', label: 'Blocked' },
+    { id: 'FAILED', label: 'Failed' },
   ];
-
-  const filteredOpportunities = opportunities.filter((opp) => {
-    if (selectedStatusTab !== 'ALL' && opp.status !== selectedStatusTab) {
-      return false;
-    }
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      return (
-        opp.id.toLowerCase().includes(term) ||
-        (opp.sourceId && opp.sourceId.toLowerCase().includes(term)) ||
-        (opp.sourceType && opp.sourceType.toLowerCase().includes(term))
-      );
-    }
-    return true;
-  });
 
   return (
     <div
@@ -94,65 +81,16 @@ export const OpportunityQueueTable: React.FC<Props> = ({
             Recovery Transactions Queue
           </h3>
           <span style={{ fontSize: '0.8125rem', color: 'var(--rzp-text-secondary)' }}>
-            {total} total opportunities recorded
+            Showing {opportunities.length} of {total} total opportunities
           </span>
-        </div>
-
-        {/* Search Field & Inline Filter Selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              backgroundColor: '#ffffff',
-              border: '1px solid var(--rzp-border)',
-              borderRadius: '0.375rem',
-              padding: '0.375rem 0.75rem',
-              width: '260px',
-            }}
-          >
-            <Search size={16} color="var(--rzp-text-secondary)" style={{ marginRight: '0.5rem' }} />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by ID or Transaction"
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--rzp-text-primary)',
-                fontSize: '0.8125rem',
-                outline: 'none',
-                width: '100%',
-              }}
-            />
-          </div>
-
-          <button
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.375rem',
-              backgroundColor: '#ffffff',
-              border: '1px solid var(--rzp-border)',
-              borderRadius: '0.375rem',
-              padding: '0.375rem 0.75rem',
-              fontSize: '0.8125rem',
-              color: 'var(--rzp-text-primary)',
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
-          >
-            <Filter size={14} color="var(--rzp-text-secondary)" /> Filter
-          </button>
         </div>
       </div>
 
-      {/* Segmented Filter Control Bar */}
+      {/* Segmented Filter Control Bar connected directly to Backend Server-side Query */}
       <div
         style={{
           backgroundColor: '#f8fafc',
-          padding: '0.5rem 1.5rem',
+          padding: '0.625rem 1.5rem',
           borderBottom: '1px solid var(--rzp-border)',
           display: 'flex',
           gap: '0.5rem',
@@ -160,11 +98,11 @@ export const OpportunityQueueTable: React.FC<Props> = ({
         }}
       >
         {statusTabs.map((tab) => {
-          const isActive = selectedStatusTab === tab.id;
+          const isActive = selectedStatus === tab.id;
           return (
             <button
               key={tab.id}
-              onClick={() => setSelectedStatusTab(tab.id)}
+              onClick={() => onStatusChange(tab.id)}
               style={{
                 padding: '0.375rem 0.875rem',
                 borderRadius: '0.375rem',
@@ -192,7 +130,7 @@ export const OpportunityQueueTable: React.FC<Props> = ({
                 Opportunity ID
               </th>
               <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Type
+                Source Type
               </th>
               <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Amount
@@ -212,14 +150,14 @@ export const OpportunityQueueTable: React.FC<Props> = ({
             </tr>
           </thead>
           <tbody>
-            {filteredOpportunities.length === 0 ? (
+            {opportunities.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ padding: '3rem', textAlign: 'center', color: 'var(--rzp-text-secondary)' }}>
-                  No recovery opportunities found matching the selected filter.
+                  No recovery opportunities found matching the selected status filter.
                 </td>
               </tr>
             ) : (
-              filteredOpportunities.map((opp) => {
+              opportunities.map((opp) => {
                 const config = statusBadgeConfig[opp.status] || {
                   label: opp.status,
                   color: 'var(--rzp-text-secondary)',
@@ -245,7 +183,7 @@ export const OpportunityQueueTable: React.FC<Props> = ({
                       {opp.id.substring(0, 18)}...
                     </td>
 
-                    {/* Type */}
+                    {/* Source Type */}
                     <td style={{ padding: '0.875rem 1rem', color: 'var(--rzp-text-secondary)', fontWeight: 500 }}>
                       {opp.sourceType || 'FAILED_PAYMENT'}
                     </td>
@@ -364,7 +302,7 @@ export const OpportunityQueueTable: React.FC<Props> = ({
         }}
       >
         <span style={{ fontSize: '0.8125rem', color: 'var(--rzp-text-secondary)' }}>
-          Showing page <strong>{page}</strong> ({opportunities.length} items)
+          Page <strong>{page}</strong> ({opportunities.length} items)
         </span>
 
         <div style={{ display: 'flex', gap: '0.5rem' }}>

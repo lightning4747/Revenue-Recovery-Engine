@@ -1,10 +1,9 @@
 import React from 'react';
-import { HelpCircle } from 'lucide-react';
+import { Activity } from 'lucide-react';
 
 export const FloatingHelpButton: React.FC = () => {
   return (
-    <button
-      onClick={() => alert('Razorpay Merchant Support & Documentation: Contact support@razorpay.com or view RRE documentation.')}
+    <div
       style={{
         position: 'fixed',
         bottom: '1.5rem',
@@ -13,22 +12,19 @@ export const FloatingHelpButton: React.FC = () => {
         display: 'inline-flex',
         alignItems: 'center',
         gap: '0.5rem',
-        backgroundColor: 'var(--rzp-support)',
-        color: '#ffffff',
-        border: 'none',
-        padding: '0.625rem 1.25rem',
+        backgroundColor: '#ffffff',
+        color: 'var(--rzp-text-primary)',
+        border: '1px solid var(--rzp-border)',
+        padding: '0.5rem 1rem',
         borderRadius: '9999px',
         fontWeight: 600,
-        fontSize: '0.875rem',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease-in-out',
+        fontSize: '0.8125rem',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--rzp-support-hover)')}
-      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--rzp-support)')}
     >
-      <HelpCircle size={18} color="#ffffff" />
-      Help & Support
-    </button>
+      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--rzp-green)', display: 'inline-block' }} />
+      <Activity size={14} color="var(--rzp-green)" />
+      RRE Engine: Active
+    </div>
   );
 };
