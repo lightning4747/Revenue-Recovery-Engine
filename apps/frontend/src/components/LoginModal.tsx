@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { loginMerchant, registerMerchant } from '../services/api';
-import { Lock, Mail, Building2 } from 'lucide-react';
+import { Lock, Mail, Building2, ShieldCheck } from 'lucide-react';
 
 interface Props {
   onSuccess: () => void;
@@ -30,8 +30,8 @@ export const LoginModal: React.FC<Props> = ({ onSuccess }) => {
       setError(
         err?.response?.data?.message ||
           (isRegistering
-            ? 'Registration failed. User may already exist.'
-            : 'Authentication failed. Invalid email or password.'),
+            ? 'Registration failed. Account may already exist.'
+            : 'Authentication failed. Invalid merchant credentials.'),
       );
     } finally {
       setLoading(false);
@@ -39,101 +39,188 @@ export const LoginModal: React.FC<Props> = ({ onSuccess }) => {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-      <div style={{ backgroundColor: '#1e293b', borderRadius: '0.5rem', border: '1px solid #334155', width: '100%', maxWidth: '420px', padding: '2rem', color: '#f8fafc' }}>
-        <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.5rem', textAlign: 'center', color: '#38bdf8' }}>
-          {isRegistering ? 'Create Merchant Account' : 'Merchant Sign In'}
-        </h2>
-        <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.875rem', color: '#94a3b8', textAlign: 'center' }}>
-          {isRegistering ? 'Register to start recovering revenue' : 'Access Control Tower Dashboard'}
-        </p>
-
-        {error && (
-          <div style={{ backgroundColor: '#9f1239', color: '#fda4af', padding: '0.75rem', borderRadius: '0.25rem', fontSize: '0.8125rem', marginBottom: '1rem' }}>
-            {error}
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: '#f4f5f8',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2000,
+        padding: '1rem',
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '0.75rem',
+          border: '1px solid var(--rzp-border)',
+          width: '100%',
+          maxWidth: '440px',
+          overflow: 'hidden',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+        }}
+      >
+        {/* Top Dark Header */}
+        <div
+          style={{
+            backgroundColor: 'var(--rzp-topbar)',
+            padding: '1.5rem 2rem',
+            textAlign: 'center',
+            color: '#ffffff',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <ShieldCheck size={28} color="#2160d5" style={{ fill: '#2160d5', stroke: '#ffffff' }} />
+            <span style={{ fontSize: '1.35rem', fontWeight: 800, fontStyle: 'italic', letterSpacing: '-0.5px' }}>
+              Razorpay
+            </span>
           </div>
-        )}
+          <h2 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600, color: '#ffffff' }}>
+            {isRegistering ? 'Create Merchant Account' : 'Merchant Sign In'}
+          </h2>
+          <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8125rem', color: '#94a3b8' }}>
+            {isRegistering ? 'Register to manage revenue recovery' : 'Revenue Recovery Engine Control Tower'}
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit}>
-          {isRegistering && (
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.25rem' }}>Business Name</label>
-              <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.25rem', padding: '0.5rem' }}>
-                <Building2 size={16} style={{ color: '#64748b', marginRight: '0.5rem' }} />
-                <input
-                  type="text"
-                  required
-                  value={businessName}
-                  onChange={(e) => setBusinessName(e.target.value)}
-                  placeholder="Acme Corporation"
-                  style={{ background: 'none', border: 'none', color: '#f8fafc', width: '100%', outline: 'none' }}
-                />
-              </div>
+        {/* Card Body */}
+        <div style={{ padding: '2rem' }}>
+          {error && (
+            <div
+              style={{
+                backgroundColor: 'var(--rzp-red-bg)',
+                color: 'var(--rzp-red)',
+                border: '1px solid var(--rzp-red-border)',
+                padding: '0.75rem 1rem',
+                borderRadius: '0.375rem',
+                fontSize: '0.8125rem',
+                marginBottom: '1.25rem',
+                fontWeight: 500,
+              }}
+            >
+              {error}
             </div>
           )}
 
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.25rem' }}>Email</label>
-            <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.25rem', padding: '0.5rem' }}>
-              <Mail size={16} style={{ color: '#64748b', marginRight: '0.5rem' }} />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="merchant@example.com"
-                style={{ background: 'none', border: 'none', color: '#f8fafc', width: '100%', outline: 'none' }}
-              />
+          <form onSubmit={handleSubmit}>
+            {isRegistering && (
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--rzp-text-secondary)', marginBottom: '0.375rem', textTransform: 'uppercase' }}>
+                  Business Name
+                </label>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid var(--rzp-border)',
+                    borderRadius: '0.375rem',
+                    padding: '0.625rem 0.875rem',
+                  }}
+                >
+                  <Building2 size={16} color="var(--rzp-text-secondary)" style={{ marginRight: '0.625rem' }} />
+                  <input
+                    type="text"
+                    required
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    placeholder="Acme Corporation"
+                    style={{ background: 'none', border: 'none', color: 'var(--rzp-text-primary)', width: '100%', outline: 'none', fontSize: '0.875rem' }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--rzp-text-secondary)', marginBottom: '0.375rem', textTransform: 'uppercase' }}>
+                Email Address
+              </label>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid var(--rzp-border)',
+                  borderRadius: '0.375rem',
+                  padding: '0.625rem 0.875rem',
+                }}
+              >
+                <Mail size={16} color="var(--rzp-text-secondary)" style={{ marginRight: '0.625rem' }} />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="merchant@example.com"
+                  style={{ background: 'none', border: 'none', color: 'var(--rzp-text-primary)', width: '100%', outline: 'none', fontSize: '0.875rem' }}
+                />
+              </div>
             </div>
-          </div>
 
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.25rem' }}>Password</label>
-            <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.25rem', padding: '0.5rem' }}>
-              <Lock size={16} style={{ color: '#64748b', marginRight: '0.5rem' }} />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                style={{ background: 'none', border: 'none', color: '#f8fafc', width: '100%', outline: 'none' }}
-              />
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--rzp-text-secondary)', marginBottom: '0.375rem', textTransform: 'uppercase' }}>
+                Password
+              </label>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid var(--rzp-border)',
+                  borderRadius: '0.375rem',
+                  padding: '0.625rem 0.875rem',
+                }}
+              >
+                <Lock size={16} color="var(--rzp-text-secondary)" style={{ marginRight: '0.625rem' }} />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  style={{ background: 'none', border: 'none', color: 'var(--rzp-text-primary)', width: '100%', outline: 'none', fontSize: '0.875rem' }}
+                />
+              </div>
             </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              backgroundColor: '#0284c7',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '0.25rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              marginBottom: '1rem',
-            }}
-          >
-            {loading ? 'Processing...' : isRegistering ? 'Register Account' : 'Sign In'}
-          </button>
-
-          <div style={{ textAlign: 'center', fontSize: '0.8125rem', color: '#94a3b8' }}>
-            {isRegistering ? 'Already have an account? ' : "Don't have an account? "}
             <button
-              type="button"
-              onClick={() => {
-                setIsRegistering(!isRegistering);
-                setError('');
+              type="submit"
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                backgroundColor: 'var(--rzp-blue)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '0.375rem',
+                fontWeight: 700,
+                fontSize: '0.875rem',
+                cursor: 'pointer',
+                marginBottom: '1.25rem',
+                boxShadow: '0 2px 4px rgba(33, 96, 213, 0.3)',
+                transition: 'background 0.2s',
               }}
-              style={{ background: 'none', border: 'none', color: '#38bdf8', cursor: 'pointer', fontWeight: 600 }}
             >
-              {isRegistering ? 'Sign In' : 'Create Account'}
+              {loading ? 'Processing...' : isRegistering ? 'Register Account' : 'Sign In to Dashboard'}
             </button>
-          </div>
-        </form>
+
+            <div style={{ textAlign: 'center', fontSize: '0.8125rem', color: 'var(--rzp-text-secondary)' }}>
+              {isRegistering ? 'Already have an account? ' : "Don't have a merchant account? "}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRegistering(!isRegistering);
+                  setError('');
+                }}
+                style={{ background: 'none', border: 'none', color: 'var(--rzp-blue)', cursor: 'pointer', fontWeight: 700 }}
+              >
+                {isRegistering ? 'Sign In' : 'Create Account'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

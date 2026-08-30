@@ -1,0 +1,82 @@
+:root {
+  --rzp-topbar: #151928;
+  --rzp-bg: #f4f5f8;
+  --rzp-sidebar: #f4f5f8;
+  --rzp-card: #ffffff;
+  --rzp-text-primary: #1f2229;
+  --rzp-text-secondary: #777c85;
+  --rzp-border: #e5e7eb;
+  --rzp-blue: #2160d5;
+  --rzp-blue-hover: #1a4eb0;
+  --rzp-blue-light: #e9f0fc;
+  --rzp-support: #3b4c6e;
+  --rzp-support-hover: #2c3a56;
+
+  /* Status Colors */
+  --rzp-green: #068f44;
+  --rzp-green-bg: #e6f4ea;
+  --rzp-green-border: #b7e4c7;
+
+  --rzp-red: #d12b2b;
+  --rzp-red-bg: #faeaea;
+  --rzp-red-border: #feb2b2;
+
+  --rzp-orange: #c65d07;
+  --rzp-orange-bg: #fef0e3;
+  --rzp-orange-border: #fbd38d;
+
+  --rzp-purple: #7c3aed;
+  --rzp-purple-bg: #f3e8ff;
+  --rzp-purple-border: #ddd6fe;
+
+  --rzp-blue-status: #2160d5;
+  --rzp-blue-status-bg: #e9f0fc;
+  --rzp-blue-status-border: #bfdbfe;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: var(--rzp-bg);
+  color: var(--rzp-text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Animations */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

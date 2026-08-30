@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Opportunity } from '../types';
-import { ExternalLink, History, Eye } from 'lucide-react';
+import { ExternalLink, History, Eye, Search, Filter, CheckCircle2, Clock, AlertTriangle, Send, TrendingUp } from 'lucide-react';
 
 interface Props {
   opportunities: Opportunity[];
@@ -11,17 +11,17 @@ interface Props {
   onOpenAuditModal: (oppId: string) => void;
 }
 
-const statusColorMap: Record<string, { bg: string; color: string }> = {
-  OBSERVED: { bg: '#334155', color: '#94a3b8' },
-  DIAGNOSED: { bg: '#1e3a8a', color: '#60a5fa' },
-  VALUED: { bg: '#312e81', color: '#818cf8' },
-  PRIORITIZED: { bg: '#581c87', color: '#c084fc' },
-  ACTION_DISPATCHED: { bg: '#0369a1', color: '#38bdf8' },
-  PARTIALLY_RECOVERED: { bg: '#854d0e', color: '#facc15' },
-  RECOVERED: { bg: '#065f46', color: '#34d399' },
-  POLICY_BLOCKED: { bg: '#9f1239', color: '#fb7185' },
-  EXPIRED: { bg: '#475569', color: '#cbd5e1' },
-  FAILED: { bg: '#881337', color: '#fda4af' },
+const statusBadgeConfig: Record<string, { label: string; color: string; bg: string; border: string; icon: any }> = {
+  RECOVERED: { label: 'Captured', color: 'var(--rzp-green)', bg: 'var(--rzp-green-bg)', border: 'var(--rzp-green-border)', icon: CheckCircle2 },
+  PARTIALLY_RECOVERED: { label: 'Partially Paid', color: 'var(--rzp-orange)', bg: 'var(--rzp-orange-bg)', border: 'var(--rzp-orange-border)', icon: Clock },
+  ACTION_DISPATCHED: { label: 'Dispatched', color: 'var(--rzp-blue-status)', bg: 'var(--rzp-blue-status-bg)', border: 'var(--rzp-blue-status-border)', icon: Send },
+  PRIORITIZED: { label: 'Prioritized', color: 'var(--rzp-purple)', bg: 'var(--rzp-purple-bg)', border: 'var(--rzp-purple-border)', icon: TrendingUp },
+  VALUED: { label: 'Valued', color: 'var(--rzp-purple)', bg: 'var(--rzp-purple-bg)', border: 'var(--rzp-purple-border)', icon: TrendingUp },
+  POLICY_BLOCKED: { label: 'Blocked', color: 'var(--rzp-red)', bg: 'var(--rzp-red-bg)', border: 'var(--rzp-red-border)', icon: AlertTriangle },
+  FAILED: { label: 'Failed', color: 'var(--rzp-red)', bg: 'var(--rzp-red-bg)', border: 'var(--rzp-red-border)', icon: AlertTriangle },
+  OBSERVED: { label: 'Observed', color: 'var(--rzp-text-secondary)', bg: '#f3f4f6', border: '#e5e7eb', icon: Eye },
+  DIAGNOSED: { label: 'Diagnosed', color: 'var(--rzp-text-secondary)', bg: '#f3f4f6', border: '#e5e7eb', icon: Eye },
+  EXPIRED: { label: 'Expired', color: 'var(--rzp-text-secondary)', bg: '#f3f4f6', border: '#e5e7eb', icon: Clock },
 };
 
 const formatINR = (paise: number) => {
@@ -40,119 +40,309 @@ export const OpportunityQueueTable: React.FC<Props> = ({
   onSelectOpportunity,
   onOpenAuditModal,
 }) => {
+  const [selectedStatusTab, setSelectedStatusTab] = useState<string>('ALL');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+
+  const statusTabs = [
+    { id: 'ALL', label: 'All Opportunities' },
+    { id: 'PRIORITIZED', label: 'Prioritized' },
+    { id: 'ACTION_DISPATCHED', label: 'Dispatched' },
+    { id: 'PARTIALLY_RECOVERED', label: 'Partially Paid' },
+    { id: 'RECOVERED', label: 'Captured' },
+    { id: 'POLICY_BLOCKED', label: 'Blocked' },
+  ];
+
+  const filteredOpportunities = opportunities.filter((opp) => {
+    if (selectedStatusTab !== 'ALL' && opp.status !== selectedStatusTab) {
+      return false;
+    }
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      return (
+        opp.id.toLowerCase().includes(term) ||
+        (opp.sourceId && opp.sourceId.toLowerCase().includes(term)) ||
+        (opp.sourceType && opp.sourceType.toLowerCase().includes(term))
+      );
+    }
+    return true;
+  });
+
   return (
-    <div style={{ backgroundColor: '#1e293b', borderRadius: '0.5rem', border: '1px solid #334155', overflow: 'hidden' }}>
-      <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ fontSize: '1.125rem', fontWeight: 600, margin: 0 }}>Recovery Opportunities Queue</h3>
-        <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Total: {total}</span>
+    <div
+      style={{
+        backgroundColor: 'var(--rzp-card)',
+        borderRadius: '0.5rem',
+        border: '1px solid var(--rzp-border)',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Table Header & Title Toolbar */}
+      <div
+        style={{
+          padding: '1.25rem 1.5rem',
+          borderBottom: '1px solid var(--rzp-border)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem',
+        }}
+      >
+        <div>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 700, margin: 0, color: 'var(--rzp-text-primary)' }}>
+            Recovery Transactions Queue
+          </h3>
+          <span style={{ fontSize: '0.8125rem', color: 'var(--rzp-text-secondary)' }}>
+            {total} total opportunities recorded
+          </span>
+        </div>
+
+        {/* Search Field & Inline Filter Selector */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: '#ffffff',
+              border: '1px solid var(--rzp-border)',
+              borderRadius: '0.375rem',
+              padding: '0.375rem 0.75rem',
+              width: '260px',
+            }}
+          >
+            <Search size={16} color="var(--rzp-text-secondary)" style={{ marginRight: '0.5rem' }} />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by ID or Transaction"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--rzp-text-primary)',
+                fontSize: '0.8125rem',
+                outline: 'none',
+                width: '100%',
+              }}
+            />
+          </div>
+
+          <button
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.375rem',
+              backgroundColor: '#ffffff',
+              border: '1px solid var(--rzp-border)',
+              borderRadius: '0.375rem',
+              padding: '0.375rem 0.75rem',
+              fontSize: '0.8125rem',
+              color: 'var(--rzp-text-primary)',
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            <Filter size={14} color="var(--rzp-text-secondary)" /> Filter
+          </button>
+        </div>
       </div>
 
+      {/* Segmented Filter Control Bar */}
+      <div
+        style={{
+          backgroundColor: '#f8fafc',
+          padding: '0.5rem 1.5rem',
+          borderBottom: '1px solid var(--rzp-border)',
+          display: 'flex',
+          gap: '0.5rem',
+          overflowX: 'auto',
+        }}
+      >
+        {statusTabs.map((tab) => {
+          const isActive = selectedStatusTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setSelectedStatusTab(tab.id)}
+              style={{
+                padding: '0.375rem 0.875rem',
+                borderRadius: '0.375rem',
+                border: 'none',
+                backgroundColor: isActive ? 'var(--rzp-blue-light)' : 'transparent',
+                color: isActive ? 'var(--rzp-blue)' : 'var(--rzp-text-secondary)',
+                fontWeight: isActive ? 700 : 500,
+                fontSize: '0.8125rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Data Table */}
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8125rem' }}>
           <thead>
-            <tr style={{ backgroundColor: '#0f172a', borderBottom: '1px solid #334155', color: '#94a3b8' }}>
-              <th style={{ padding: '0.75rem 1rem' }}>Opportunity ID</th>
-              <th style={{ padding: '0.75rem 1rem' }}>Type</th>
-              <th style={{ padding: '0.75rem 1rem' }}>Amount</th>
-              <th style={{ padding: '0.75rem 1rem' }}>Status</th>
-              <th style={{ padding: '0.75rem 1rem' }}>Priority Score</th>
-              <th style={{ padding: '0.75rem 1rem' }}>Recovered</th>
-              <th style={{ padding: '0.75rem 1rem' }}>Actions</th>
+            <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid var(--rzp-border)', color: 'var(--rzp-text-secondary)' }}>
+              <th style={{ padding: '0.75rem 1.25rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Opportunity ID
+              </th>
+              <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Type
+              </th>
+              <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Amount
+              </th>
+              <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Status
+              </th>
+              <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Priority Score
+              </th>
+              <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Recovered
+              </th>
+              <th style={{ padding: '0.75rem 1.25rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
-            {opportunities.length === 0 ? (
+            {filteredOpportunities.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
-                  No recovery opportunities found.
+                <td colSpan={7} style={{ padding: '3rem', textAlign: 'center', color: 'var(--rzp-text-secondary)' }}>
+                  No recovery opportunities found matching the selected filter.
                 </td>
               </tr>
             ) : (
-              opportunities.map((opp) => {
-                const style = statusColorMap[opp.status] || { bg: '#334155', color: '#94a3b8' };
+              filteredOpportunities.map((opp) => {
+                const config = statusBadgeConfig[opp.status] || {
+                  label: opp.status,
+                  color: 'var(--rzp-text-secondary)',
+                  bg: '#f3f4f6',
+                  border: '#e5e7eb',
+                  icon: Eye,
+                };
+                const StatusIcon = config.icon;
+
                 return (
-                  <tr key={opp.id} style={{ borderBottom: '1px solid #334155', backgroundColor: '#1e293b' }}>
-                    <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontWeight: 500, color: '#f8fafc' }}>
-                      {opp.id.substring(0, 16)}...
+                  <tr
+                    key={opp.id}
+                    style={{
+                      borderBottom: '1px solid var(--rzp-border)',
+                      backgroundColor: '#ffffff',
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+                  >
+                    {/* ID */}
+                    <td style={{ padding: '0.875rem 1.25rem', fontWeight: 600, color: 'var(--rzp-text-primary)' }} className="font-mono">
+                      {opp.id.substring(0, 18)}...
                     </td>
-                    <td style={{ padding: '0.75rem 1rem', color: '#cbd5e1' }}>{opp.sourceType}</td>
-                    <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{formatINR(opp.amount)}</td>
-                    <td style={{ padding: '0.75rem 1rem' }}>
+
+                    {/* Type */}
+                    <td style={{ padding: '0.875rem 1rem', color: 'var(--rzp-text-secondary)', fontWeight: 500 }}>
+                      {opp.sourceType || 'FAILED_PAYMENT'}
+                    </td>
+
+                    {/* Amount */}
+                    <td style={{ padding: '0.875rem 1rem', fontWeight: 700, color: 'var(--rzp-text-primary)' }} className="font-mono">
+                      {formatINR(opp.amount)}
+                    </td>
+
+                    {/* Status Pill Badge */}
+                    <td style={{ padding: '0.875rem 1rem' }}>
                       <span
                         style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.375rem',
                           padding: '0.25rem 0.625rem',
                           borderRadius: '9999px',
                           fontSize: '0.75rem',
-                          fontWeight: 600,
-                          backgroundColor: style.bg,
-                          color: style.color,
+                          fontWeight: 700,
+                          backgroundColor: config.bg,
+                          color: config.color,
+                          border: `1px solid ${config.border}`,
                         }}
                       >
-                        {opp.status}
+                        <StatusIcon size={12} /> {config.label}
                       </span>
                     </td>
-                    <td style={{ padding: '0.75rem 1rem', color: '#c084fc', fontWeight: 600 }}>
-                      {opp.priorityScore ? formatINR(opp.priorityScore) : 'N/A'}
+
+                    {/* Priority Score */}
+                    <td style={{ padding: '0.875rem 1rem', color: 'var(--rzp-purple)', fontWeight: 700 }} className="font-mono">
+                      {opp.priorityScore ? formatINR(opp.priorityScore) : '—'}
                     </td>
-                    <td style={{ padding: '0.75rem 1rem', color: '#34d399', fontWeight: 600 }}>
+
+                    {/* Recovered Amount */}
+                    <td style={{ padding: '0.875rem 1rem', color: 'var(--rzp-green)', fontWeight: 700 }} className="font-mono">
                       {formatINR(opp.recoveredAmount || 0)}
                     </td>
-                    <td style={{ padding: '0.75rem 1rem', display: 'flex', gap: '0.5rem' }}>
-                      <button
-                        onClick={() => onSelectOpportunity(opp)}
-                        style={{
-                          padding: '0.375rem 0.625rem',
-                          backgroundColor: '#334155',
-                          color: '#f8fafc',
-                          border: 'none',
-                          borderRadius: '0.25rem',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.25rem',
-                          fontSize: '0.75rem',
-                        }}
-                      >
-                        <Eye size={14} /> View
-                      </button>
-                      <button
-                        onClick={() => onOpenAuditModal(opp.id)}
-                        style={{
-                          padding: '0.375rem 0.625rem',
-                          backgroundColor: '#312e81',
-                          color: '#a5b4fc',
-                          border: 'none',
-                          borderRadius: '0.25rem',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.25rem',
-                          fontSize: '0.75rem',
-                        }}
-                      >
-                        <History size={14} /> Audit
-                      </button>
-                      {opp.lastPaymentLinkUrl && (
-                        <a
-                          href={opp.lastPaymentLinkUrl}
-                          target="_blank"
-                          rel="noreferrer"
+
+                    {/* Row Actions */}
+                    <td style={{ padding: '0.875rem 1.25rem', textAlign: 'right' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <button
+                          onClick={() => onSelectOpportunity(opp)}
                           style={{
-                            padding: '0.375rem 0.625rem',
-                            backgroundColor: '#0284c7',
-                            color: '#ffffff',
-                            borderRadius: '0.25rem',
-                            textDecoration: 'none',
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--rzp-blue)',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            fontSize: '0.8125rem',
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '0.25rem',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
+                            padding: 0,
                           }}
                         >
-                          <ExternalLink size={14} /> Launch
-                        </a>
-                      )}
+                          <Eye size={14} /> Details
+                        </button>
+
+                        <button
+                          onClick={() => onOpenAuditModal(opp.id)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--rzp-text-secondary)',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            fontSize: '0.8125rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            padding: 0,
+                          }}
+                        >
+                          <History size={14} /> Audit
+                        </button>
+
+                        {opp.lastPaymentLinkUrl && (
+                          <a
+                            href={opp.lastPaymentLinkUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              color: 'var(--rzp-green)',
+                              fontWeight: 600,
+                              textDecoration: 'none',
+                              fontSize: '0.8125rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                            }}
+                          >
+                            <ExternalLink size={14} /> Launch
+                          </a>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -162,23 +352,57 @@ export const OpportunityQueueTable: React.FC<Props> = ({
         </table>
       </div>
 
-      {/* Pagination */}
-      <div style={{ padding: '0.75rem 1.25rem', backgroundColor: '#0f172a', borderTop: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <button
-          onClick={() => onPageChange(page - 1)}
-          disabled={page <= 1}
-          style={{ padding: '0.375rem 0.75rem', backgroundColor: '#1e293b', color: '#94a3b8', border: '1px solid #334155', borderRadius: '0.25rem', cursor: 'pointer' }}
-        >
-          Previous
-        </button>
-        <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Page {page}</span>
-        <button
-          onClick={() => onPageChange(page + 1)}
-          disabled={opportunities.length < 20}
-          style={{ padding: '0.375rem 0.75rem', backgroundColor: '#1e293b', color: '#94a3b8', border: '1px solid #334155', borderRadius: '0.25rem', cursor: 'pointer' }}
-        >
-          Next
-        </button>
+      {/* Pagination Footer */}
+      <div
+        style={{
+          padding: '0.875rem 1.5rem',
+          backgroundColor: '#f8fafc',
+          borderTop: '1px solid var(--rzp-border)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <span style={{ fontSize: '0.8125rem', color: 'var(--rzp-text-secondary)' }}>
+          Showing page <strong>{page}</strong> ({opportunities.length} items)
+        </span>
+
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            onClick={() => onPageChange(page - 1)}
+            disabled={page <= 1}
+            style={{
+              padding: '0.375rem 0.875rem',
+              backgroundColor: '#ffffff',
+              color: 'var(--rzp-text-primary)',
+              border: '1px solid var(--rzp-border)',
+              borderRadius: '0.375rem',
+              cursor: page <= 1 ? 'not-allowed' : 'pointer',
+              opacity: page <= 1 ? 0.5 : 1,
+              fontWeight: 500,
+              fontSize: '0.8125rem',
+            }}
+          >
+            Previous
+          </button>
+          <button
+            onClick={() => onPageChange(page + 1)}
+            disabled={opportunities.length < 20}
+            style={{
+              padding: '0.375rem 0.875rem',
+              backgroundColor: '#ffffff',
+              color: 'var(--rzp-text-primary)',
+              border: '1px solid var(--rzp-border)',
+              borderRadius: '0.375rem',
+              cursor: opportunities.length < 20 ? 'not-allowed' : 'pointer',
+              opacity: opportunities.length < 20 ? 0.5 : 1,
+              fontWeight: 500,
+              fontSize: '0.8125rem',
+            }}
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );
