@@ -29,9 +29,12 @@ describe('AppController & Auth/Merchant (e2e)', () => {
     const migrationsFolder = path.join(__dirname, '../drizzle');
     await migrate(db, { migrationsFolder });
 
-    // Clean tables for deterministic test execution
+    // Clean test-scoped records for deterministic test execution without wiping persistent merchants
     await db.execute(
-      sql`TRUNCATE TABLE merchants, merchant_credentials, user_sessions, webhook_events CASCADE`,
+      sql`DELETE FROM merchants WHERE email LIKE 'merchant_%@example.com'`,
+    );
+    await db.execute(
+      sql`TRUNCATE TABLE webhook_events CASCADE`,
     );
 
     await app.init();

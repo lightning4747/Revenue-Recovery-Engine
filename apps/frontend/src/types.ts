@@ -44,9 +44,3 @@ export interface MerchantPolicy {
   maxRetryCount: number;
   autoExecutionEnabled: boolean;
 }
-
-export interface MerchantCredentials {
-  keyId?: string;
-  hasKeySecret?: boolean;
-  hasWebhookSecret?: boolean;
-}

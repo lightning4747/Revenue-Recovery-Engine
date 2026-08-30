@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AuditTrailItem, DashboardSummary, MerchantCredentials, MerchantPolicy, Opportunity } from '../types';
+import { AuditTrailItem, DashboardSummary, MerchantPolicy, Opportunity } from '../types';
 
 const api = axios.create({
   baseURL: '/api/v1',
@@ -74,13 +74,4 @@ export const fetchPolicy = async (): Promise<MerchantPolicy> => {
 export const updatePolicy = async (policy: Partial<MerchantPolicy>): Promise<MerchantPolicy> => {
   const res = await api.patch('/merchant/policy', policy);
   return res.data?.data || res.data;
-};
-
-export const fetchCredentials = async (): Promise<MerchantCredentials> => {
-  const res = await api.get('/merchant/credentials');
-  return res.data?.data || res.data;
-};
-
-export const updateCredentials = async (credentials: { keyId: string; keySecret: string; webhookSecret: string }): Promise<void> => {
-  await api.put('/merchant/credentials', credentials);
 };

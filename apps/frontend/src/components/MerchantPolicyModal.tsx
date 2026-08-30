@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { fetchCredentials, fetchPolicy, updateCredentials, updatePolicy } from '../services/api';
-import { MerchantCredentials, MerchantPolicy } from '../types';
-import { X, Sliders, Key, Save, CheckCircle2 } from 'lucide-react';
+import { fetchPolicy, updatePolicy } from '../services/api';
+import { MerchantPolicy } from '../types';
+import { X, Sliders, Save, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
@@ -14,10 +14,6 @@ export const MerchantPolicyModal: React.FC<Props> = ({ isOpen, onClose }) => {
     maxRetryCount: 3,
     autoExecutionEnabled: true,
   });
-  const [credentials, setCredentials] = useState<MerchantCredentials>({});
-  const [keyId, setKeyId] = useState('');
-  const [keySecret, setKeySecret] = useState('');
-  const [webhookSecret, setWebhookSecret] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -29,13 +25,9 @@ export const MerchantPolicyModal: React.FC<Props> = ({ isOpen, onClose }) => {
     setErrorMsg('');
     setSuccessMsg('');
 
-    Promise.all([fetchPolicy(), fetchCredentials()])
-      .then(([policyData, credData]) => {
+    fetchPolicy()
+      .then((policyData) => {
         if (policyData) setPolicy(policyData);
-        if (credData) {
-          setCredentials(credData);
-          setKeyId(credData.keyId || '');
-        }
       })
       .catch((err) => {
         console.error('Failed to load merchant settings', err);
@@ -58,15 +50,7 @@ export const MerchantPolicyModal: React.FC<Props> = ({ isOpen, onClose }) => {
         autoExecutionEnabled: Boolean(policy.autoExecutionEnabled),
       });
 
-      if (keyId && (keySecret || webhookSecret)) {
-        await updateCredentials({
-          keyId,
-          keySecret,
-          webhookSecret,
-        });
-      }
-
-      setSuccessMsg('Merchant policy & API credentials saved successfully!');
+      setSuccessMsg('Merchant recovery policy guardrails saved successfully!');
     } catch (err: any) {
       setErrorMsg(err?.response?.data?.message || 'Failed to save merchant policy configuration.');
     } finally {
@@ -94,7 +78,7 @@ export const MerchantPolicyModal: React.FC<Props> = ({ isOpen, onClose }) => {
           borderRadius: '0.75rem',
           border: '1px solid var(--rzp-border)',
           width: '100%',
-          maxWidth: '580px',
+          maxWidth: '560px',
           padding: '1.75rem',
           color: 'var(--rzp-text-primary)',
           boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
@@ -113,10 +97,10 @@ export const MerchantPolicyModal: React.FC<Props> = ({ isOpen, onClose }) => {
         >
           <div>
             <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Sliders size={20} color="var(--rzp-blue)" /> Merchant Policy & API Configuration
+              <Sliders size={20} color="var(--rzp-blue)" /> Merchant Policy Guardrails
             </h3>
             <span style={{ fontSize: '0.8125rem', color: 'var(--rzp-text-secondary)' }}>
-              Configure automated recovery thresholds & Razorpay API credentials
+              Configure automated recovery thresholds & intervention limits
             </span>
           </div>
           <button
@@ -176,10 +160,34 @@ export const MerchantPolicyModal: React.FC<Props> = ({ isOpen, onClose }) => {
               </div>
             )}
 
+            {/* Read-Only Environment Status Banner */}
+            <div
+              style={{
+                backgroundColor: 'var(--rzp-blue-light)',
+                border: '1px solid var(--rzp-blue-status-border)',
+                padding: '0.875rem 1rem',
+                borderRadius: '0.5rem',
+                marginBottom: '1.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.625rem',
+              }}
+            >
+              <ShieldCheck size={20} color="var(--rzp-blue)" />
+              <div>
+                <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--rzp-blue)' }}>
+                  Razorpay API Environment
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--rzp-text-secondary)' }}>
+                  Credentials & webhook secrets are securely loaded from backend server configuration (.env).
+                </div>
+              </div>
+            </div>
+
             {/* Policy Thresholds */}
             <div style={{ marginBottom: '1.5rem', backgroundColor: '#f8fafc', padding: '1.25rem', borderRadius: '0.5rem', border: '1px solid var(--rzp-border)' }}>
               <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.9375rem', fontWeight: 700, color: 'var(--rzp-text-primary)' }}>
-                Recovery Policy Guardrails
+                Recovery Policy Rules
               </h4>
 
               <div style={{ marginBottom: '1rem' }}>
@@ -234,74 +242,6 @@ export const MerchantPolicyModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   checked={policy.autoExecutionEnabled}
                   onChange={(e) => setPolicy({ ...policy, autoExecutionEnabled: e.target.checked })}
                   style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                />
-              </div>
-            </div>
-
-            {/* Razorpay API Credentials */}
-            <div style={{ marginBottom: '1.5rem', backgroundColor: '#f8fafc', padding: '1.25rem', borderRadius: '0.5rem', border: '1px solid var(--rzp-border)' }}>
-              <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.9375rem', fontWeight: 700, color: 'var(--rzp-text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Key size={16} color="var(--rzp-blue)" /> Razorpay Webhook & API Credentials
-              </h4>
-
-              <div style={{ marginBottom: '0.875rem' }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--rzp-text-secondary)', marginBottom: '0.375rem' }}>
-                  Razorpay Key ID
-                </label>
-                <input
-                  type="text"
-                  value={keyId}
-                  onChange={(e) => setKeyId(e.target.value)}
-                  placeholder="rzp_test_..."
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem 0.75rem',
-                    borderRadius: '0.375rem',
-                    border: '1px solid var(--rzp-border)',
-                    fontSize: '0.875rem',
-                    outline: 'none',
-                  }}
-                  className="font-mono"
-                />
-              </div>
-
-              <div style={{ marginBottom: '0.875rem' }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--rzp-text-secondary)', marginBottom: '0.375rem' }}>
-                  Razorpay Key Secret {credentials.hasKeySecret ? '(Secret Configured)' : ''}
-                </label>
-                <input
-                  type="password"
-                  value={keySecret}
-                  onChange={(e) => setKeySecret(e.target.value)}
-                  placeholder={credentials.hasKeySecret ? '••••••••' : 'Enter Razorpay Key Secret'}
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem 0.75rem',
-                    borderRadius: '0.375rem',
-                    border: '1px solid var(--rzp-border)',
-                    fontSize: '0.875rem',
-                    outline: 'none',
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--rzp-text-secondary)', marginBottom: '0.375rem' }}>
-                  Webhook Secret {credentials.hasWebhookSecret ? '(Secret Configured)' : ''}
-                </label>
-                <input
-                  type="password"
-                  value={webhookSecret}
-                  onChange={(e) => setWebhookSecret(e.target.value)}
-                  placeholder={credentials.hasWebhookSecret ? '••••••••' : 'Enter Webhook Secret'}
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem 0.75rem',
-                    borderRadius: '0.375rem',
-                    border: '1px solid var(--rzp-border)',
-                    fontSize: '0.875rem',
-                    outline: 'none',
-                  }}
                 />
               </div>
             </div>
