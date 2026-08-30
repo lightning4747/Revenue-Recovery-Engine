@@ -44,8 +44,8 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/rre_db
       REDIS_URL: redis://redis:6379
-      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-rzp_test_TU49xbg8Ntt7gB}
-      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-nolo0rlyoCIzg4xoTABSAoLb}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-rzp_test_TVsCTwvJZE0JqB}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-YN2yrJLEyHY51aa7dOZV8eVx}
       WEBHOOK_SECRET: ${WEBHOOK_SECRET:-bow_webhook_secret_123}
       JWT_SECRET: super_secret_jwt_key_minimum_32_chars
       ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef

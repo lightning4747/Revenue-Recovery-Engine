@@ -40,9 +40,9 @@ export class SeedService implements OnModuleInit {
 
       // Ensure merchantCredentials exist and are up to date for default merchant
       if (this.cryptoService) {
-        const webhookSecret = this.configService?.get('WEBHOOK_SECRET') || 'bow';
-        const keySecret = this.configService?.get('RAZORPAY_KEY_SECRET') || 'dummy_key_secret';
-        const keyId = this.configService?.get('RAZORPAY_KEY_ID') || 'rzp_test_default_key';
+        const webhookSecret = this.configService?.get('WEBHOOK_SECRET') || 'bow_webhook_secret_123';
+        const keySecret = this.configService?.get('RAZORPAY_KEY_SECRET') || 'YN2yrJLEyHY51aa7dOZV8eVx';
+        const keyId = this.configService?.get('RAZORPAY_KEY_ID') || 'rzp_test_TVsCTwvJZE0JqB';
 
         const encryptedKeySecret = this.cryptoService.encrypt(keySecret);
         const encryptedWebhookSecret = this.cryptoService.encrypt(webhookSecret);

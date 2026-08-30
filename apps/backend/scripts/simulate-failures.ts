@@ -132,6 +132,15 @@ const FAILURE_SCENARIOS = [
     minAmount: 800000,
     maxAmount: 2500000,
   },
+  {
+    reason: 'card_invalid',
+    source: 'issuer',
+    step: 'payment_authorization',
+    code: 'BAD_REQUEST_ERROR',
+    description: 'Invalid card number or stolen card flag reported by issuing network',
+    minAmount: 50000,
+    maxAmount: 180000,
+  },
 ];
 
 async function resolveMerchantAndSecret(): Promise<{ merchantId: string; webhookSecret: string }> {

@@ -36,9 +36,20 @@ export class PaymentLinkActionService {
     const opportunity = opportunities[0];
     const merchantId = opportunity.merchantId;
 
-    // Fetch decrypted merchant credentials
-    const credentials =
-      await this.merchantService.getDecryptedCredentials(merchantId);
+    // Fetch decrypted merchant credentials with environment fallback
+    let credentials = await this.merchantService.getDecryptedCredentials(merchantId);
+    if (!credentials || !credentials.keyId || credentials.keyId === 'rzp_test_default_key') {
+      const envKeyId = process.env.RAZORPAY_KEY_ID;
+      const envKeySecret = process.env.RAZORPAY_KEY_SECRET;
+      if (envKeyId && envKeySecret) {
+        credentials = {
+          keyId: envKeyId,
+          keySecret: envKeySecret,
+          webhookSecret: process.env.WEBHOOK_SECRET || 'bow_webhook_secret_123',
+        };
+      }
+    }
+
     if (!credentials || !credentials.keyId || !credentials.keySecret) {
       this.logger.warn(
         `PAYMENT_LINK_ACTION_FAILED: Missing or invalid Razorpay API credentials for merchant ${merchantId}`,
