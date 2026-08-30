@@ -214,7 +214,8 @@ async function runTestScenario() {
   console.log(`  Base URL:       ${baseUrl}`);
 
   const { merchantId, webhookSecret } = await resolveMerchantAndSecret();
-  const targetEndpoint = `${baseUrl.replace(/\/$/, '')}/api/v1/webhooks/razorpay/${merchantId}`;
+  const customTarget = getOption('targetUrl', 'TARGET_URL');
+  const targetEndpoint = customTarget || `${baseUrl.replace(/\/$/, '')}/api/v1/webhooks/razorpay/${merchantId}`;
 
   console.log(`  Target URL:     ${targetEndpoint}`);
   console.log(`  Merchant ID:    ${merchantId}`);

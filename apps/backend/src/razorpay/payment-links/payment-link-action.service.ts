@@ -112,24 +112,48 @@ export class PaymentLinkActionService {
       }
 
       if (!response) {
-        const port = process.env.PORT || '3000';
-        const sandboxBase = process.env.BASE_URL || `http://localhost:${port}`;
-        const sandboxUrl = `${sandboxBase}/api/v1/sandbox/checkout?opp=${opportunity.id}&ref=${referenceId}&amount=${amountPaise}&merchant=${merchantId}`;
+        // Try creating an official Razorpay Order via Orders API (no 30-link quota limit)
+        try {
+          const orderRes = await this.razorpayApiClient.createOrder(credentials, {
+            amount: amountPaise,
+            currency: opportunity.currency || 'INR',
+            receipt: referenceId,
+            notes: payload.notes,
+          });
 
-        if (credentials.keyId.startsWith('rzp_test_') || process.env.ENABLE_MOCK_FALLBACK === 'true') {
-          this.logger.warn(
-            `RAZORPAY_TEST_MODE_FALLBACK: Razorpay API calls failed (${lastErr?.message}). Generating Sandbox Launch Link (${sandboxUrl}).`,
+          const port = process.env.PORT || '3000';
+          const sandboxBase = process.env.BASE_URL || `http://localhost:${port}`;
+          const sandboxUrl = `${sandboxBase}/api/v1/sandbox/checkout?opp=${opportunity.id}&ref=${referenceId}&amount=${amountPaise}&merchant=${merchantId}&orderId=${orderRes.id}`;
+
+          this.logger.log(
+            `RAZORPAY_ORDER_CREATED_SUCCESS: Created official Razorpay Order ${orderRes.id} for reference ${referenceId}`,
           );
+
           response = {
-            id: `plink_${crypto.randomBytes(8).toString('hex')}`,
+            id: orderRes.id,
             short_url: sandboxUrl,
             reference_id: referenceId,
           };
-        } else {
-          this.logger.error(
-            `RAZORPAY_API_CALL_FAILED: API request failed for reference_id ${referenceId}: ${lastErr?.message}`,
-          );
-          throw lastErr;
+        } catch (orderErr: any) {
+          const port = process.env.PORT || '3000';
+          const sandboxBase = process.env.BASE_URL || `http://localhost:${port}`;
+          const sandboxUrl = `${sandboxBase}/api/v1/sandbox/checkout?opp=${opportunity.id}&ref=${referenceId}&amount=${amountPaise}&merchant=${merchantId}`;
+
+          if (credentials.keyId.startsWith('rzp_test_') || process.env.ENABLE_MOCK_FALLBACK === 'true') {
+            this.logger.warn(
+              `RAZORPAY_TEST_MODE_FALLBACK: Razorpay API calls failed (${lastErr?.message}). Generating Sandbox Launch Link (${sandboxUrl}).`,
+            );
+            response = {
+              id: `plink_${crypto.randomBytes(8).toString('hex')}`,
+              short_url: sandboxUrl,
+              reference_id: referenceId,
+            };
+          } else {
+            this.logger.error(
+              `RAZORPAY_API_CALL_FAILED: API request failed for reference_id ${referenceId}: ${lastErr?.message}`,
+            );
+            throw lastErr;
+          }
         }
       }
 

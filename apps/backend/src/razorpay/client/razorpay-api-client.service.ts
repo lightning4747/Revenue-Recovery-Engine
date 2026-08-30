@@ -72,4 +72,43 @@ export class RazorpayApiClientService {
       throw new Error(`RAZORPAY_API_ERROR: ${errorMsg}`);
     }
   }
+
+  async createOrder(
+    credentials: { keyId: string; keySecret: string },
+    payload: { amount: number; currency: string; receipt: string; notes?: Record<string, any> },
+  ): Promise<{ id: string; amount: number; currency: string; status: string; receipt: string }> {
+    const authHeader = `Basic ${Buffer.from(
+      `${credentials.keyId}:${credentials.keySecret}`,
+    ).toString('base64')}`;
+
+    try {
+      const response$ = this.httpService.post<{ id: string; amount: number; currency: string; status: string; receipt: string }>(
+        'https://api.razorpay.com/v1/orders',
+        payload,
+        {
+          headers: {
+            Authorization: authHeader,
+            'Content-Type': 'application/json',
+          },
+          timeout: 15000,
+        },
+      );
+
+      const response = await firstValueFrom(response$);
+      this.logger.log(
+        `RAZORPAY_ORDER_CREATED: Created Razorpay Order ${response.data.id} (receipt: ${response.data.receipt})`,
+      );
+      return response.data;
+    } catch (error: any) {
+      const errorMsg =
+        error?.response?.data?.error?.description ||
+        error?.response?.data?.message ||
+        error?.message ||
+        'Unknown Razorpay API Error';
+      this.logger.error(
+        `RAZORPAY_ORDER_API_ERROR: Failed to create order for receipt ${payload.receipt}: ${errorMsg}`,
+      );
+      throw new Error(`RAZORPAY_ORDER_ERROR: ${errorMsg}`);
+    }
+  }
 }
