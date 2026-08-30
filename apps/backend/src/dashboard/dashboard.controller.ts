@@ -1,7 +1,10 @@
 import {
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
+  Post,
   Query,
   Req,
   UseGuards,
@@ -40,5 +43,19 @@ export class DashboardController {
   async getAuditTrail(@Req() req: any, @Param('id') id: string) {
     const merchantId = req.user.merchantId;
     return this.dashboardService.getAuditTrail(merchantId, id);
+  }
+
+  @Post('opportunities/:id/approve')
+  @HttpCode(HttpStatus.OK)
+  async approveOpportunity(@Req() req: any, @Param('id') id: string) {
+    const merchantId = req.user.merchantId;
+    return this.dashboardService.approveOpportunity(merchantId, id);
+  }
+
+  @Post('opportunities/:id/recover')
+  @HttpCode(HttpStatus.OK)
+  async triggerRecovery(@Req() req: any, @Param('id') id: string) {
+    const merchantId = req.user.merchantId;
+    return this.dashboardService.triggerRecovery(merchantId, id);
   }
 }

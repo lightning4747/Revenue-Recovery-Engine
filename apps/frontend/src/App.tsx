@@ -116,6 +116,7 @@ export default function App() {
       <OpportunityDetailModal
         opportunity={selectedOpportunity}
         onClose={() => setSelectedOpportunity(null)}
+        onRefresh={loadData}
       />
       <AuditTimelineModal
         opportunityId={auditOppId}

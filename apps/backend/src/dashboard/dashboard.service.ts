@@ -1,8 +1,9 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { DRIZZLE_DB, DrizzleDb } from '../database/database.provider';
 import * as schema from '../database/schema';
 import { OpportunityQueryDto } from './dto/opportunity-query.dto';
+import { PaymentLinkActionService } from '../razorpay/payment-links/payment-link-action.service';
 
 export interface DashboardSummaryResponse {
   revenueAtRiskPaise: number;
@@ -25,7 +26,10 @@ export interface AuditTrailItem {
 export class DashboardService {
   private readonly logger = new Logger(DashboardService.name);
 
-  constructor(@Inject(DRIZZLE_DB) private readonly db: DrizzleDb) {}
+  constructor(
+    @Inject(DRIZZLE_DB) private readonly db: DrizzleDb,
+    @Optional() @Inject(PaymentLinkActionService) private readonly paymentLinkActionService?: PaymentLinkActionService,
+  ) {}
 
   async getSummary(merchantId: string): Promise<DashboardSummaryResponse> {
     const opps = await this.db
@@ -162,5 +166,31 @@ export class DashboardService {
       .orderBy(schema.auditEvents.timestamp);
 
     return auditRecords;
+  }
+
+  async approveOpportunity(
+    merchantId: string,
+    opportunityId: string,
+  ): Promise<typeof schema.recoveryOpportunities.$inferSelect> {
+    const opp = await this.getOpportunityById(merchantId, opportunityId);
+
+    if (this.paymentLinkActionService) {
+      const dispatched =
+        await this.paymentLinkActionService.executePaymentLinkAction(
+          opportunityId,
+        );
+      if (dispatched) {
+        return dispatched;
+      }
+    }
+
+    return opp;
+  }
+
+  async triggerRecovery(
+    merchantId: string,
+    opportunityId: string,
+  ): Promise<typeof schema.recoveryOpportunities.$inferSelect> {
+    return this.approveOpportunity(merchantId, opportunityId);
   }
 }

@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Opportunity } from '../types';
-import { X, ExternalLink, ShieldCheck } from 'lucide-react';
+import { X, ExternalLink, ShieldCheck, PlayCircle } from 'lucide-react';
+import { approveOpportunity } from '../services/api';
 
 interface Props {
   opportunity: Opportunity | null;
   onClose: () => void;
+  onRefresh?: () => void;
 }
 
 const formatINR = (paise: number) => {
@@ -15,8 +17,24 @@ const formatINR = (paise: number) => {
   }).format(paise / 100);
 };
 
-export const OpportunityDetailModal: React.FC<Props> = ({ opportunity, onClose }) => {
+export const OpportunityDetailModal: React.FC<Props> = ({ opportunity, onClose, onRefresh }) => {
+  const [actionLoading, setActionLoading] = useState(false);
+
   if (!opportunity) return null;
+
+  const handleApprove = async () => {
+    if (!opportunity) return;
+    setActionLoading(true);
+    try {
+      await approveOpportunity(opportunity.id);
+      if (onRefresh) onRefresh();
+      onClose();
+    } catch (err) {
+      console.error('Failed to approve opportunity', err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
@@ -46,6 +64,30 @@ export const OpportunityDetailModal: React.FC<Props> = ({ opportunity, onClose }
             <div style={{ fontSize: '1.125rem', fontWeight: 700, color: '#34d399' }}>{formatINR(opportunity.recoveredAmount || 0)}</div>
           </div>
         </div>
+
+        {/* Manual Approval & Trigger Button */}
+        {(opportunity.status === 'POLICY_BLOCKED' || opportunity.status === 'PRIORITIZED' || opportunity.status === 'VALUED') && (
+          <div style={{ backgroundColor: '#1e3a8a', padding: '1rem', borderRadius: '0.375rem', marginBottom: '1rem', textAlign: 'center' }}>
+            <button
+              onClick={handleApprove}
+              disabled={actionLoading}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                backgroundColor: '#3b82f6',
+                color: '#ffffff',
+                border: 'none',
+                padding: '0.5rem 1.25rem',
+                borderRadius: '0.25rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              <PlayCircle size={16} /> {actionLoading ? 'Dispatching...' : 'Approve & Dispatch Recovery Link'}
+            </button>
+          </div>
+        )}
 
         {/* Test Mode Link Launch Button */}
         {opportunity.lastPaymentLinkUrl && (

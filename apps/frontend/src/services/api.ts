@@ -55,3 +55,13 @@ export const fetchAuditTrail = async (opportunityId: string): Promise<AuditTrail
   const res = await api.get(`/dashboard/audit-trail/${opportunityId}`);
   return res.data?.data || res.data;
 };
+
+export const approveOpportunity = async (opportunityId: string): Promise<Opportunity> => {
+  const res = await api.post(`/dashboard/opportunities/${opportunityId}/approve`);
+  return res.data?.data || res.data;
+};
+
+export const triggerRecovery = async (opportunityId: string): Promise<Opportunity> => {
+  const res = await api.post(`/dashboard/opportunities/${opportunityId}/recover`);
+  return res.data?.data || res.data;
+};
