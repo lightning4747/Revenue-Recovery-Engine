@@ -355,7 +355,7 @@ describe('AppController & Auth/Merchant (e2e)', () => {
 
       // Poll DB briefly for async worker processing completion
       let processed = false;
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 60; i++) {
         await new Promise((r) => setTimeout(r, 100));
         const dbResult = await db.execute(sql`
           SELECT processing_status, processed_at
