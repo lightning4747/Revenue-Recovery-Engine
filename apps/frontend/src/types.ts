@@ -12,6 +12,8 @@ export interface Opportunity {
   merchantId: string;
   sourceType: string;
   sourceId?: string;
+  originalOrderId?: string;
+  originalTransactionId?: string;
   amount: number;
   currency: string;
   status: string;

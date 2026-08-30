@@ -199,6 +199,15 @@ export const OpportunityDetailModal: React.FC<Props> = ({ opportunity, onClose, 
           </div>
           <div>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--rzp-text-secondary)', textTransform: 'uppercase' }}>
+              Razorpay Order & Payment ID
+            </span>
+            <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--rzp-text-primary)', marginTop: '0.25rem' }} className="font-mono">
+              Order: {opportunity.originalOrderId || 'N/A'}<br />
+              Payment: {opportunity.originalTransactionId || 'N/A'}
+            </div>
+          </div>
+          <div>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--rzp-text-secondary)', textTransform: 'uppercase' }}>
               Original Transaction Amount
             </span>
             <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--rzp-text-primary)', marginTop: '0.25rem' }} className="font-mono">
