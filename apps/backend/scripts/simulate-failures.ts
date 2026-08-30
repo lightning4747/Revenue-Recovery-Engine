@@ -145,6 +145,8 @@ const FAILURE_SCENARIOS = [
 
 async function resolveMerchantAndSecret(): Promise<{ merchantId: string; webhookSecret: string; accessToken: string }> {
   const defaultSecret = process.env.WEBHOOK_SECRET || 'bow_webhook_secret_123';
+  const keyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_TVsCTwvJZE0JqB';
+  const keySecret = process.env.RAZORPAY_KEY_SECRET || 'YN2yrJLEyHY51aa7dOZV8eVx';
   const cleanBase = baseUrl.replace(/\/$/, '');
 
   try {
@@ -162,6 +164,18 @@ async function resolveMerchantAndSecret(): Promise<{ merchantId: string; webhook
         if (parts.length === 3) {
           const decoded = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
           const merchantId = decoded.sub;
+
+          // Ensure merchant credentials in DB are synced to authentic Razorpay keys
+          await sendHttpRequest(
+            `${cleanBase}/api/v1/merchant/credentials`,
+            'PUT',
+            JSON.stringify({
+              keyId,
+              keySecret,
+              webhookSecret: defaultSecret,
+            }),
+            { Authorization: `Bearer ${accessToken}` },
+          );
 
           return { merchantId, webhookSecret: defaultSecret, accessToken };
         }
@@ -359,8 +373,8 @@ async function runBulkSimulation() {
       console.error(`[${i}/${totalCount}] ✗ Connection error: ${err.message}`);
     }
 
-    // Small delay to simulate realistic traffic arrival
-    await new Promise((r) => setTimeout(r, 100));
+    // 400ms delay between events to allow clean outbound Razorpay API calls
+    await new Promise((r) => setTimeout(r, 400));
   }
 
   console.log('\n==========================================================================');

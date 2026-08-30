@@ -91,16 +91,30 @@ export class PaymentLinkActionService {
     };
 
     try {
-      let response: { id: string; short_url: string; reference_id: string };
-      try {
-        response = await this.razorpayApiClient.createPaymentLink(
-          credentials,
-          payload,
-        );
-      } catch (apiErr: any) {
+      let response: { id: string; short_url: string; reference_id: string } | undefined;
+      let lastErr: any = null;
+
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          response = await this.razorpayApiClient.createPaymentLink(
+            credentials,
+            payload,
+          );
+          lastErr = null;
+          break;
+        } catch (apiErr: any) {
+          lastErr = apiErr;
+          this.logger.warn(
+            `RAZORPAY_API_RETRY_ATTEMPT_${attempt}: Failed to create payment link (${apiErr?.message}). Retrying in ${attempt * 500}ms...`,
+          );
+          await new Promise((r) => setTimeout(r, attempt * 500));
+        }
+      }
+
+      if (!response) {
         if (credentials.keyId.startsWith('rzp_test_') || process.env.ENABLE_MOCK_FALLBACK === 'true') {
           this.logger.warn(
-            `RAZORPAY_TEST_MODE_FALLBACK: Razorpay API call failed (${apiErr?.message}). Generating test mode launch link.`,
+            `RAZORPAY_TEST_MODE_FALLBACK: Razorpay API calls failed (${lastErr?.message}). Generating test mode launch link.`,
           );
           response = {
             id: `plink_${crypto.randomBytes(8).toString('hex')}`,
@@ -109,9 +123,9 @@ export class PaymentLinkActionService {
           };
         } else {
           this.logger.error(
-            `RAZORPAY_API_CALL_FAILED: API request failed for reference_id ${referenceId}: ${apiErr?.message}`,
+            `RAZORPAY_API_CALL_FAILED: API request failed for reference_id ${referenceId}: ${lastErr?.message}`,
           );
-          throw apiErr;
+          throw lastErr;
         }
       }
 
