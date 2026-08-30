@@ -13,6 +13,7 @@ describe('LedgerTransactionService', () => {
       select: jest.fn(),
       insert: jest.fn(),
       update: jest.fn(),
+      transaction: jest.fn(async (cb) => cb(mockDb)),
     };
     mockStateMachine = {
       transitionState: jest.fn(),
@@ -51,7 +52,9 @@ describe('LedgerTransactionService', () => {
         where: jest.fn().mockImplementation(() => {
           selectCallCount++;
           if (selectCallCount === 1) return Promise.resolve([]); // No existing payment
-          return Promise.resolve([mockOpp]); // Opportunity found
+          const queryResult: any = Promise.resolve([mockOpp]);
+          queryResult.for = jest.fn().mockReturnValue(queryResult);
+          return queryResult;
         }),
       }),
     }));
