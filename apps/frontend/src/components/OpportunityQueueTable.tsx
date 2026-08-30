@@ -1,6 +1,6 @@
 import React from 'react';
 import { Opportunity } from '../types';
-import { ExternalLink, History, Eye, CheckCircle2, Clock, AlertTriangle, Send, TrendingUp } from 'lucide-react';
+import { ExternalLink, History, Eye, CheckCircle2, Clock, AlertTriangle, Send, TrendingUp, Cpu } from 'lucide-react';
 
 interface Props {
   opportunities: Opportunity[];
@@ -24,6 +24,7 @@ const statusBadgeConfig: Record<string, { label: string; color: string; bg: stri
   OBSERVED: { label: 'Observed', color: 'var(--rzp-text-secondary)', bg: '#f3f4f6', border: '#e5e7eb', icon: Eye },
   DIAGNOSED: { label: 'Diagnosed', color: 'var(--rzp-text-secondary)', bg: '#f3f4f6', border: '#e5e7eb', icon: Eye },
   EXPIRED: { label: 'Expired', color: 'var(--rzp-text-secondary)', bg: '#f3f4f6', border: '#e5e7eb', icon: Clock },
+  UNRECOVERABLE: { label: 'Unrecoverable', color: 'var(--rzp-red)', bg: 'var(--rzp-red-bg)', border: 'var(--rzp-red-border)', icon: AlertTriangle },
 };
 
 const formatINR = (paise: number) => {
@@ -32,6 +33,24 @@ const formatINR = (paise: number) => {
     currency: 'INR',
     maximumFractionDigits: 2,
   }).format(paise / 100);
+};
+
+const formatCauseLabel = (cause?: string) => {
+  if (!cause) return 'PENDING_DIAGNOSIS';
+  switch (cause) {
+    case 'CUSTOMER_AUTH_TIMEOUT':
+      return 'Auth Timeout (3DS OTP)';
+    case 'INSUFFICIENT_FUNDS':
+      return 'Insufficient Balance';
+    case 'BANK_TECHNICAL_OUTAGE':
+      return 'Bank Outage';
+    case 'NETWORK_TIMEOUT':
+      return 'Gateway Latency';
+    case 'CARD_INVALID':
+      return 'Card Invalid / Hard Decline';
+    default:
+      return cause;
+  }
 };
 
 export const OpportunityQueueTable: React.FC<Props> = ({
@@ -130,7 +149,7 @@ export const OpportunityQueueTable: React.FC<Props> = ({
                 Opportunity ID
               </th>
               <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Source Type
+                Diagnosed Cause
               </th>
               <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Amount
@@ -183,9 +202,24 @@ export const OpportunityQueueTable: React.FC<Props> = ({
                       {opp.id.substring(0, 18)}...
                     </td>
 
-                    {/* Source Type */}
-                    <td style={{ padding: '0.875rem 1rem', color: 'var(--rzp-text-secondary)', fontWeight: 500 }}>
-                      {opp.sourceType || 'FAILED_PAYMENT'}
+                    {/* Diagnosed Cause */}
+                    <td style={{ padding: '0.875rem 1rem' }}>
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.375rem',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '0.25rem',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          backgroundColor: '#f1f5f9',
+                          color: '#334155',
+                          border: '1px solid #cbd5e1',
+                        }}
+                      >
+                        <Cpu size={12} style={{ color: 'var(--rzp-blue)' }} /> {formatCauseLabel(opp.cause)}
+                      </span>
                     </td>
 
                     {/* Amount */}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Opportunity } from '../types';
-import { X, ExternalLink, ShieldCheck, PlayCircle } from 'lucide-react';
+import { X, ExternalLink, ShieldCheck, PlayCircle, Cpu, AlertCircle, BarChart2 } from 'lucide-react';
 import { approveOpportunity } from '../services/api';
 
 interface Props {
@@ -15,6 +15,44 @@ const formatINR = (paise: number) => {
     currency: 'INR',
     maximumFractionDigits: 2,
   }).format(paise / 100);
+};
+
+const causeDetailsMap: Record<string, { label: string; explanation: string; probability: string; color: string; bg: string }> = {
+  CUSTOMER_AUTH_TIMEOUT: {
+    label: 'Customer Auth Timeout (3DS OTP Delay)',
+    explanation: 'Payment authorization timed out waiting for customer 3DS OTP entry. High recovery potential via payment link.',
+    probability: '70% Recovery Confidence',
+    color: '#2160d5',
+    bg: '#eff6ff',
+  },
+  INSUFFICIENT_FUNDS: {
+    label: 'Insufficient Account Balance',
+    explanation: 'Issuing bank declined transaction due to insufficient account balance at time of authorization.',
+    probability: '60% Recovery Confidence',
+    color: '#9333ea',
+    bg: '#f3e8ff',
+  },
+  BANK_TECHNICAL_OUTAGE: {
+    label: 'Issuing Bank Core Outage',
+    explanation: 'Core banking network of the issuing bank was temporarily offline during authorization request.',
+    probability: '80% Recovery Confidence',
+    color: '#d97706',
+    bg: '#fffbeb',
+  },
+  NETWORK_TIMEOUT: {
+    label: 'Gateway Latency Timeout',
+    explanation: 'Acquiring payment gateway experienced network latency exceeding the 5000ms SLA threshold.',
+    probability: '65% Recovery Confidence',
+    color: '#2563eb',
+    bg: '#eff6ff',
+  },
+  CARD_INVALID: {
+    label: 'Card Invalid / Hard Decline',
+    explanation: 'Invalid card number or stolen card flag reported by issuing card network. Unrecoverable failure.',
+    probability: '0% Recovery Confidence (Unrecoverable)',
+    color: '#dc2626',
+    bg: '#fef2f2',
+  },
 };
 
 export const OpportunityDetailModal: React.FC<Props> = ({ opportunity, onClose, onRefresh }) => {
@@ -34,6 +72,14 @@ export const OpportunityDetailModal: React.FC<Props> = ({ opportunity, onClose, 
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const causeInfo = causeDetailsMap[opportunity.cause || ''] || {
+    label: opportunity.cause || 'Transaction Failure Observed',
+    explanation: 'System ingested raw failure event from Razorpay gateway. Executing diagnosis and valuation policy checks.',
+    probability: `${Math.round((opportunity.recoveryProbability || 0.5) * 100)}% Recovery Confidence`,
+    color: 'var(--rzp-blue)',
+    bg: '#f8fafc',
   };
 
   return (
@@ -56,7 +102,9 @@ export const OpportunityDetailModal: React.FC<Props> = ({ opportunity, onClose, 
           borderRadius: '0.75rem',
           border: '1px solid var(--rzp-border)',
           width: '100%',
-          maxWidth: '620px',
+          maxWidth: '640px',
+          maxHeight: '90vh',
+          overflowY: 'auto',
           padding: '1.75rem',
           color: 'var(--rzp-text-primary)',
           boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
@@ -96,6 +144,38 @@ export const OpportunityDetailModal: React.FC<Props> = ({ opportunity, onClose, 
           </button>
         </div>
 
+        {/* AI Root-Cause Diagnosis & Explanation Banner */}
+        <div
+          style={{
+            backgroundColor: causeInfo.bg,
+            border: `1px solid ${causeInfo.color}33`,
+            borderRadius: '0.5rem',
+            padding: '1.25rem',
+            marginBottom: '1.25rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <Cpu size={18} style={{ color: causeInfo.color }} />
+            <span style={{ fontSize: '0.875rem', fontWeight: 700, color: causeInfo.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              AI Root-Cause Diagnosis
+            </span>
+          </div>
+          <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--rzp-text-primary)', marginBottom: '0.375rem' }}>
+            {causeInfo.label}
+          </div>
+          <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.8125rem', color: 'var(--rzp-text-secondary)', lineHeight: 1.5 }}>
+            {causeInfo.explanation}
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.75rem', fontWeight: 600 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: causeInfo.color }}>
+              <BarChart2 size={14} /> {causeInfo.probability}
+            </span>
+            <span style={{ color: 'var(--rzp-text-secondary)' }}>
+              Source: {opportunity.sourceType || 'FAILED_PAYMENT'}
+            </span>
+          </div>
+        </div>
+
         {/* Opportunity Metrics Grid */}
         <div
           style={{
@@ -130,12 +210,12 @@ export const OpportunityDetailModal: React.FC<Props> = ({ opportunity, onClose, 
               Expected Recovery Value (ERV)
             </span>
             <div style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--rzp-purple)', marginTop: '0.25rem' }} className="font-mono">
-              {opportunity.expectedRecoveryValue ? formatINR(opportunity.expectedRecoveryValue) : '—'}
+              {opportunity.expectedRecoveryValue ? formatINR(opportunity.expectedRecoveryValue) : formatINR(Math.round(opportunity.amount * (opportunity.recoveryProbability || 0.6)))}
             </div>
           </div>
           <div>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--rzp-text-secondary)', textTransform: 'uppercase' }}>
-              Verified Recovered
+              Verified Recovered Amount
             </span>
             <div style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--rzp-green)', marginTop: '0.25rem' }} className="font-mono">
               {formatINR(opportunity.recoveredAmount || 0)}
@@ -195,7 +275,7 @@ export const OpportunityDetailModal: React.FC<Props> = ({ opportunity, onClose, 
           >
             <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--rzp-green)', marginBottom: '0.5rem' }}>
               <ShieldCheck size={18} style={{ verticalAlign: 'middle', marginRight: '0.375rem' }} />
-              Test Mode Sandbox Payment Launch
+              Live Razorpay Hosted Payment Launch Link
             </div>
             <a
               href={opportunity.lastPaymentLinkUrl}
