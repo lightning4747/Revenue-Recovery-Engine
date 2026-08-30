@@ -112,13 +112,17 @@ export class PaymentLinkActionService {
       }
 
       if (!response) {
+        const port = process.env.PORT || '3000';
+        const sandboxBase = process.env.BASE_URL || `http://localhost:${port}`;
+        const sandboxUrl = `${sandboxBase}/api/v1/sandbox/checkout?opp=${opportunity.id}&ref=${referenceId}&amount=${amountPaise}&merchant=${merchantId}`;
+
         if (credentials.keyId.startsWith('rzp_test_') || process.env.ENABLE_MOCK_FALLBACK === 'true') {
           this.logger.warn(
-            `RAZORPAY_TEST_MODE_FALLBACK: Razorpay API calls failed (${lastErr?.message}). Generating test mode launch link.`,
+            `RAZORPAY_TEST_MODE_FALLBACK: Razorpay API calls failed (${lastErr?.message}). Generating Sandbox Launch Link (${sandboxUrl}).`,
           );
           response = {
             id: `plink_${crypto.randomBytes(8).toString('hex')}`,
-            short_url: `https://rzp.io/i/test_${referenceId}`,
+            short_url: sandboxUrl,
             reference_id: referenceId,
           };
         } else {
