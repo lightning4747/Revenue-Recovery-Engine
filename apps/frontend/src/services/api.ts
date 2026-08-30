@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AuditTrailItem, DashboardSummary, MerchantPolicy, Opportunity } from '../types';
+import { AuditTrailItem, DashboardSummary, Opportunity } from '../types';
 
 const api = axios.create({
   baseURL: '/api/v1',
@@ -63,15 +63,5 @@ export const approveOpportunity = async (opportunityId: string): Promise<Opportu
 
 export const triggerRecovery = async (opportunityId: string): Promise<Opportunity> => {
   const res = await api.post(`/dashboard/opportunities/${opportunityId}/recover`);
-  return res.data?.data || res.data;
-};
-
-export const fetchPolicy = async (): Promise<MerchantPolicy> => {
-  const res = await api.get('/merchant/policy');
-  return res.data?.data || res.data;
-};
-
-export const updatePolicy = async (policy: Partial<MerchantPolicy>): Promise<MerchantPolicy> => {
-  const res = await api.patch('/merchant/policy', policy);
   return res.data?.data || res.data;
 };

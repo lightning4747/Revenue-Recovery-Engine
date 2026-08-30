@@ -6,7 +6,6 @@ import { ExecutiveSummaryCards } from './components/ExecutiveSummaryCards';
 import { OpportunityQueueTable } from './components/OpportunityQueueTable';
 import { OpportunityDetailModal } from './components/OpportunityDetailModal';
 import { AuditTimelineModal } from './components/AuditTimelineModal';
-import { MerchantPolicyModal } from './components/MerchantPolicyModal';
 import { LoginModal } from './components/LoginModal';
 
 export default function App() {
@@ -23,7 +22,6 @@ export default function App() {
   const [auditOppId, setAuditOppId] = useState<string | null>(null);
   const [auditTrail, setAuditTrail] = useState<AuditTrailItem[]>([]);
   const [loadingAudit, setLoadingAudit] = useState<boolean>(false);
-  const [isPolicyModalOpen, setIsPolicyModalOpen] = useState<boolean>(false);
 
   const loadData = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -80,7 +78,7 @@ export default function App() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--rzp-bg)', color: 'var(--rzp-text-primary)' }}>
       {/* Top Header Banner */}
-      <HeaderBanner onLogout={handleLogout} onOpenPolicyModal={() => setIsPolicyModalOpen(true)} />
+      <HeaderBanner onLogout={handleLogout} />
 
       {/* Main Centered Container */}
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1.5rem' }}>
@@ -108,10 +106,6 @@ export default function App() {
         auditTrail={auditTrail}
         loading={loadingAudit}
         onClose={() => setAuditOppId(null)}
-      />
-      <MerchantPolicyModal
-        isOpen={isPolicyModalOpen}
-        onClose={() => setIsPolicyModalOpen(false)}
       />
     </div>
   );

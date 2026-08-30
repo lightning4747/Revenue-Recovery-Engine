@@ -1,12 +1,11 @@
 import React from 'react';
-import { ShieldCheck, LogOut, Sliders } from 'lucide-react';
+import { ShieldCheck, LogOut } from 'lucide-react';
 
 interface Props {
   onLogout: () => void;
-  onOpenPolicyModal: () => void;
 }
 
-export const HeaderBanner: React.FC<Props> = ({ onLogout, onOpenPolicyModal }) => {
+export const HeaderBanner: React.FC<Props> = ({ onLogout }) => {
   return (
     <header
       style={{
@@ -36,26 +35,6 @@ export const HeaderBanner: React.FC<Props> = ({ onLogout, onOpenPolicyModal }) =
 
       {/* Right Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <button
-          onClick={onOpenPolicyModal}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.375rem',
-            padding: '0.5rem 0.875rem',
-            backgroundColor: '#1f2937',
-            color: '#38bdf8',
-            border: '1px solid #374151',
-            borderRadius: '0.375rem',
-            cursor: 'pointer',
-            fontSize: '0.8125rem',
-            fontWeight: 600,
-            transition: 'background 0.2s',
-          }}
-        >
-          <Sliders size={14} /> Merchant Policy
-        </button>
-
         <button
           onClick={onLogout}
           style={{
