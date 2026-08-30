@@ -156,7 +156,7 @@ async function resolveMerchantAndSecret(): Promise<{ merchantId: string; webhook
 
     if (loginRes.statusCode === 200) {
       const parsed = JSON.parse(loginRes.body);
-      const accessToken = parsed?.data?.accessToken;
+      const accessToken = parsed?.data?.accessToken || parsed?.accessToken;
       if (accessToken) {
         const parts = accessToken.split('.');
         if (parts.length === 3) {
@@ -167,8 +167,8 @@ async function resolveMerchantAndSecret(): Promise<{ merchantId: string; webhook
         }
       }
     }
-  } catch {
-    // Fallback
+  } catch (err: any) {
+    console.error(`Login error in simulator: ${err?.message}`);
   }
 
   return { merchantId: 'm_default_merchant', webhookSecret: defaultSecret, accessToken: '' };
@@ -189,11 +189,12 @@ async function runBulkSimulation() {
     console.log('==========================================================================');
 
     try {
+      const headers: Record<string, string> = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
       const oppsRes = await sendHttpRequest(
-        `${cleanBase}/api/v1/dashboard/opportunities?status=ACTION_DISPATCHED&limit=50`,
+        `${cleanBase}/api/v1/dashboard/opportunities?limit=50`,
         'GET',
         undefined,
-        { Authorization: `Bearer ${accessToken}` },
+        headers,
       );
 
       if (oppsRes.statusCode !== 200) {
@@ -201,20 +202,22 @@ async function runBulkSimulation() {
         return;
       }
 
-      const oppsData = JSON.parse(oppsRes.body)?.data?.data || [];
+      const allOpps = JSON.parse(oppsRes.body)?.data?.data || [];
+      const oppsData = allOpps.filter((o: any) => o.status === 'ACTION_DISPATCHED' || o.status === 'PRIORITIZED');
+
       if (oppsData.length === 0) {
         console.log('ℹ No open dispatched opportunities found to recover. Run `pnpm simulate` first to generate failure events.');
         return;
       }
 
-      console.log(`Found ${oppsData.length} dispatched opportunities. Simulating customer recovery payments...\n`);
+      console.log(`Found ${oppsData.length} active opportunities. Simulating customer recovery payments...\n`);
 
       let recoveredCount = 0;
       for (let i = 0; i < oppsData.length; i++) {
         const opp = oppsData[i];
         const eventId = `evt_rec_${Date.now()}_${i + 1}`;
         const paymentId = `pay_recovered_${crypto.randomBytes(6).toString('hex')}`;
-        const referenceId = opp.lastReferenceId || `${opp.id}_att_1`;
+        const referenceId = opp.lastReferenceId || `${opp.id.substring(0, 24)}_att_1`;
         const paymentLinkId = opp.lastPaymentLinkId || `plink_${crypto.randomBytes(6).toString('hex')}`;
 
         const payloadObj = {
