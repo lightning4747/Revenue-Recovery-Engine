@@ -125,77 +125,45 @@ async function resolveMerchantAndSecret(): Promise<{ merchantId: string; webhook
     };
   }
 
-  // Zero-config developer auto-setup: ensure dev test merchant exists in DB
+  // Default to m_default_merchant (the persistent default merchant account for merchant@example.com)
+  const defaultMerchantId = 'm_default_merchant';
+  const defaultSecret = rawWebhookSecret || 'dummy_webhook_secret';
+
   const cleanBase = baseUrl.replace(/\/$/, '');
-  const devEmail = 'dev_script_user@rre.local';
-  const devPassword = 'password123';
-  const devSecret = rawWebhookSecret || 'dummy_webhook_secret';
-
   try {
-    let accessToken: string | undefined;
-
-    // Try register first
-    const regRes = await sendHttpRequest(
-      `${cleanBase}/api/v1/auth/register`,
+    // Log in as default merchant to ensure default credentials exist
+    const loginRes = await sendHttpRequest(
+      `${cleanBase}/api/v1/auth/login`,
       'POST',
       JSON.stringify({
-        email: devEmail,
-        password: devPassword,
-        businessName: 'Local Script Test Merchant',
+        email: 'merchant@example.com',
+        password: 'password123',
       }),
     );
-
-    if (regRes.statusCode === 201) {
-      const parsed = JSON.parse(regRes.body);
-      accessToken = parsed?.data?.accessToken;
-    } else if (regRes.statusCode === 409) {
-      // Already exists, log in
-      const loginRes = await sendHttpRequest(
-        `${cleanBase}/api/v1/auth/login`,
-        'POST',
-        JSON.stringify({
-          email: devEmail,
-          password: devPassword,
-        }),
-      );
-      if (loginRes.statusCode === 200) {
-        const parsed = JSON.parse(loginRes.body);
-        accessToken = parsed?.data?.accessToken;
-      }
-    }
-
-    if (accessToken) {
-      // Decode sub from JWT payload
-      const parts = accessToken.split('.');
-      if (parts.length === 3) {
-        const decoded = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
-        const autoMerchantId = decoded.sub;
-
-        // Upsert merchant credentials
+    if (loginRes.statusCode === 200) {
+      const parsed = JSON.parse(loginRes.body);
+      const accessToken = parsed?.data?.accessToken;
+      if (accessToken) {
+        // Upsert merchant credentials for m_default_merchant
         await sendHttpRequest(
           `${cleanBase}/api/v1/merchant/credentials`,
           'PUT',
           JSON.stringify({
-            keyId: 'rzp_test_script_key',
+            keyId: 'rzp_test_default_key',
             keySecret: 'dummy_key_secret',
-            webhookSecret: devSecret,
+            webhookSecret: defaultSecret,
           }),
           { Authorization: `Bearer ${accessToken}` },
         );
-
-        return {
-          merchantId: autoMerchantId,
-          webhookSecret: devSecret,
-        };
       }
     }
   } catch {
-    // If backend connection fails or auto-setup fails, fallback to default ID
+    // If backend auto-setup fails, fallback to default ID
   }
 
   return {
-    merchantId: 'm_test_merchant_123',
-    webhookSecret: devSecret,
+    merchantId: defaultMerchantId,
+    webhookSecret: defaultSecret,
   };
 }
 
