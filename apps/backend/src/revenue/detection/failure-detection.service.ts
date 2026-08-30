@@ -117,7 +117,11 @@ export class FailureDetectionService {
                 errorDetails.source,
                 errorDetails.reason,
               )
-              .catch(() => {});
+              .catch((err) =>
+                this.logger.warn(
+                  `Background AI explanation generation failed for opportunity ${opp.id}: ${err?.message}`,
+                ),
+              );
           }
 
           // 4. Trigger Phase 08 Prioritization & Merchant Policy Pipeline
