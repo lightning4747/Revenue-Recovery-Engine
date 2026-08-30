@@ -1,6 +1,6 @@
 import React from 'react';
 import { DashboardSummary } from '../types';
-import { ShieldAlert, CheckCircle2, TrendingUp, RefreshCw, Calendar, ChevronRight } from 'lucide-react';
+import { ShieldAlert, CheckCircle2, TrendingUp, RefreshCw } from 'lucide-react';
 
 interface Props {
   summary: DashboardSummary | null;
@@ -125,9 +125,8 @@ export const ExecutiveSummaryCards: React.FC<Props> = ({ summary, loading, onRef
           <div style={{ fontSize: '1.75rem', fontWeight: 700, marginTop: '0.5rem', color: 'var(--rzp-text-primary)' }}>
             {summary ? formatINR(summary.expectedRecoverablePaise) : '₹0.00'}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+          <div style={{ marginTop: '0.5rem' }}>
             <span style={{ fontSize: '0.75rem', color: 'var(--rzp-text-secondary)' }}>Probability-weighted valuation</span>
-            <ChevronRight size={16} color="var(--rzp-text-secondary)" />
           </div>
         </div>
 
@@ -154,11 +153,10 @@ export const ExecutiveSummaryCards: React.FC<Props> = ({ summary, loading, onRef
           <div style={{ fontSize: '1.75rem', fontWeight: 700, marginTop: '0.5rem', color: 'var(--rzp-red)' }}>
             {summary ? formatINR(summary.revenueAtRiskPaise) : '₹0.00'}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+          <div style={{ marginTop: '0.5rem' }}>
             <span style={{ fontSize: '0.75rem', color: 'var(--rzp-text-secondary)' }}>
               {summary?.activeOpportunitiesCount || 0} active open leakage cases
             </span>
-            <ChevronRight size={16} color="var(--rzp-text-secondary)" />
           </div>
         </div>
 
@@ -185,11 +183,10 @@ export const ExecutiveSummaryCards: React.FC<Props> = ({ summary, loading, onRef
           <div style={{ fontSize: '1.75rem', fontWeight: 700, marginTop: '0.5rem', color: 'var(--rzp-green)' }}>
             {summary ? `${summary.recoveryRatePercentage}%` : '0%'}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+          <div style={{ marginTop: '0.5rem' }}>
             <span style={{ fontSize: '0.75rem', color: 'var(--rzp-text-secondary)' }}>
               Total: {summary?.totalOpportunitiesCount || 0} evaluated cases
             </span>
-            <ChevronRight size={16} color="var(--rzp-text-secondary)" />
           </div>
         </div>
       </div>
