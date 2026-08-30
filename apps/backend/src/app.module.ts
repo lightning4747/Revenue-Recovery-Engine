@@ -24,6 +24,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: ['.env', 'apps/backend/.env', '../.env'],
       validationSchema: envValidationSchema,
     }),
     LoggerModule.forRoot({
