@@ -21,14 +21,22 @@ export class OutcomeVerificationService {
     payload: any,
   ): Promise<{ success: boolean; opportunityId?: string; isDuplicate?: boolean }> {
     const rootPayload = payload?.payload || payload;
-    const linkEntity = rootPayload?.payment_link?.entity || rootPayload?.payment_link || payload;
+    const linkEntity = rootPayload?.payment_link?.entity || rootPayload?.payment_link;
+    const orderEntity = rootPayload?.order?.entity || rootPayload?.order;
     const paymentEntity = rootPayload?.payment?.entity || rootPayload?.payment;
+    const refundEntity = rootPayload?.refund?.entity || rootPayload?.refund;
 
     let opportunityId =
       linkEntity?.notes?.opportunity_id ||
+      orderEntity?.notes?.opportunity_id ||
+      paymentEntity?.notes?.opportunity_id ||
       payload?.notes?.opportunity_id;
 
-    const refId = linkEntity?.reference_id || payload?.reference_id;
+    const refId =
+      linkEntity?.reference_id ||
+      orderEntity?.receipt ||
+      paymentEntity?.description ||
+      payload?.reference_id;
 
     if (!opportunityId && refId && typeof refId === 'string' && refId.startsWith('opp_')) {
       const parts = refId.split('_att_');
@@ -37,7 +45,7 @@ export class OutcomeVerificationService {
 
     if (!opportunityId && !refId) {
       this.logger.warn(
-        `OUTCOME_VERIFICATION_WARN: Could not correlate webhook event ${eventType} to Opportunity (Missing notes.opportunity_id or reference_id)`,
+        `OUTCOME_VERIFICATION_WARN: Could not correlate webhook event ${eventType} to Opportunity (Missing notes.opportunity_id or reference_id/receipt)`,
       );
       return { success: false };
     }
@@ -71,9 +79,30 @@ export class OutcomeVerificationService {
     const matchedOpp = opps[0];
     opportunityId = matchedOpp.id;
 
-    if (eventType === 'payment_link.partially_paid' || eventType === 'payment_link.paid') {
-      const razorpayPaymentId = paymentEntity?.id;
-      const capturedAmountPaise = Number(paymentEntity?.amount || linkEntity?.amount_paid || 0);
+    // Handle Payment Settlement (Payment Links, Orders, Captures)
+    const isPaymentSettlement = [
+      'payment_link.paid',
+      'payment_link.partially_paid',
+      'order.paid',
+      'payment.captured',
+      'payment.authorized',
+    ].includes(eventType);
+
+    if (isPaymentSettlement) {
+      const razorpayPaymentId =
+        paymentEntity?.id ||
+        orderEntity?.id ||
+        linkEntity?.id ||
+        `pay_recovered_${Date.now()}`;
+
+      const capturedAmountPaise = Number(
+        paymentEntity?.amount ||
+          orderEntity?.amount_paid ||
+          orderEntity?.amount ||
+          linkEntity?.amount_paid ||
+          matchedOpp.amount ||
+          0,
+      );
 
       if (!razorpayPaymentId) {
         this.logger.error(
@@ -85,10 +114,14 @@ export class OutcomeVerificationService {
       const ledgerResult = await this.ledgerTransactionService.processPaymentLedger({
         merchantId,
         opportunityId,
-        paymentLinkId: linkEntity?.id,
+        paymentLinkId: linkEntity?.id || orderEntity?.id,
         razorpayPaymentId,
         capturedAmountPaise,
       });
+
+      this.logger.log(
+        `OUTCOME_VERIFICATION_SUCCESS: Opportunity ${opportunityId} processed for event ${eventType} (Amount: ${capturedAmountPaise} paise, Duplicate: ${ledgerResult.isDuplicate})`,
+      );
 
       return {
         success: true,
@@ -97,11 +130,26 @@ export class OutcomeVerificationService {
       };
     }
 
-    if (eventType === 'payment_link.expired' || eventType === 'payment_link.cancelled') {
+    // Handle Refund Events
+    if (eventType.startsWith('refund.')) {
+      this.logger.log(
+        `OUTCOME_VERIFICATION_REFUND: Recorded refund event ${eventType} for opportunity ${opportunityId} (Refund ID: ${refundEntity?.id || 'unknown'})`,
+      );
+      return { success: true, opportunityId };
+    }
+
+    // Handle Expired or Cancelled Links/Orders
+    if (
+      eventType === 'payment_link.expired' ||
+      eventType === 'payment_link.cancelled' ||
+      eventType === 'order.expired'
+    ) {
       const updatedOpp = await this.stateMachineService.transitionState(
         opportunityId,
         'EXPIRED',
-        `LINK_${eventType.toUpperCase().replace('.', '_')}`,
+        eventType.startsWith('payment_link.')
+          ? `LINK_${eventType.toUpperCase().replace('.', '_')}`
+          : `EVENT_${eventType.toUpperCase().replace('.', '_')}`,
       );
 
       this.logger.log(

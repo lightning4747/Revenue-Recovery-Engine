@@ -67,7 +67,12 @@ export class WebhookEventsProcessor extends WorkerHost {
         `WORKER_PROCESSING_EVENT: Processing event ${eventId} (${event.eventType})`,
       );
 
-      if (event.eventType.startsWith('payment_link.')) {
+      const isOutcomeEvent =
+        event.eventType.startsWith('payment_link.') ||
+        event.eventType.startsWith('refund.') ||
+        ['order.paid', 'order.expired', 'payment.captured', 'payment.authorized'].includes(event.eventType);
+
+      if (isOutcomeEvent) {
         if (this.outcomeVerificationService) {
           await this.outcomeVerificationService.processPaymentLinkEvent(
             merchantId,
