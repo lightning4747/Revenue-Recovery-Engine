@@ -70,7 +70,11 @@ export class WebhookEventsProcessor extends WorkerHost {
       const isOutcomeEvent =
         event.eventType.startsWith('payment_link.') ||
         event.eventType.startsWith('refund.') ||
-        ['order.paid', 'order.expired', 'payment.captured', 'payment.authorized'].includes(event.eventType);
+        event.eventType.startsWith('payment.dispute.') ||
+        event.eventType.startsWith('invoice.') ||
+        event.eventType.startsWith('qr_code.') ||
+        event.eventType.startsWith('payout.') ||
+        ['order.paid', 'payment.captured', 'payment.authorized', 'settlement.processed'].includes(event.eventType);
 
       if (isOutcomeEvent) {
         if (this.outcomeVerificationService) {

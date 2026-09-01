@@ -25,16 +25,20 @@ export class OutcomeVerificationService {
     const orderEntity = rootPayload?.order?.entity || rootPayload?.order;
     const paymentEntity = rootPayload?.payment?.entity || rootPayload?.payment;
     const refundEntity = rootPayload?.refund?.entity || rootPayload?.refund;
+    const invoiceEntity = rootPayload?.invoice?.entity || rootPayload?.invoice;
+    const disputeEntity = rootPayload?.dispute?.entity || rootPayload?.dispute;
 
     let opportunityId =
       linkEntity?.notes?.opportunity_id ||
       orderEntity?.notes?.opportunity_id ||
       paymentEntity?.notes?.opportunity_id ||
+      invoiceEntity?.notes?.opportunity_id ||
       payload?.notes?.opportunity_id;
 
     const refId =
       linkEntity?.reference_id ||
       orderEntity?.receipt ||
+      invoiceEntity?.receipt ||
       paymentEntity?.description ||
       payload?.reference_id;
 
@@ -79,13 +83,16 @@ export class OutcomeVerificationService {
     const matchedOpp = opps[0];
     opportunityId = matchedOpp.id;
 
-    // Handle Payment Settlement (Payment Links, Orders, Captures)
+    // Handle Official Razorpay Payment Settlement Events
     const isPaymentSettlement = [
       'payment_link.paid',
       'payment_link.partially_paid',
       'order.paid',
       'payment.captured',
       'payment.authorized',
+      'invoice.paid',
+      'invoice.partially_paid',
+      'qr_code.credited',
     ].includes(eventType);
 
     if (isPaymentSettlement) {
@@ -93,6 +100,7 @@ export class OutcomeVerificationService {
         paymentEntity?.id ||
         orderEntity?.id ||
         linkEntity?.id ||
+        invoiceEntity?.id ||
         `pay_recovered_${Date.now()}`;
 
       const capturedAmountPaise = Number(
@@ -100,6 +108,7 @@ export class OutcomeVerificationService {
           orderEntity?.amount_paid ||
           orderEntity?.amount ||
           linkEntity?.amount_paid ||
+          invoiceEntity?.amount_paid ||
           matchedOpp.amount ||
           0,
       );
@@ -114,7 +123,7 @@ export class OutcomeVerificationService {
       const ledgerResult = await this.ledgerTransactionService.processPaymentLedger({
         merchantId,
         opportunityId,
-        paymentLinkId: linkEntity?.id || orderEntity?.id,
+        paymentLinkId: linkEntity?.id || orderEntity?.id || invoiceEntity?.id,
         razorpayPaymentId,
         capturedAmountPaise,
       });
@@ -130,19 +139,20 @@ export class OutcomeVerificationService {
       };
     }
 
-    // Handle Refund Events
-    if (eventType.startsWith('refund.')) {
+    // Handle Official Razorpay Refund & Dispute Events
+    if (eventType.startsWith('refund.') || eventType.startsWith('payment.dispute.')) {
       this.logger.log(
-        `OUTCOME_VERIFICATION_REFUND: Recorded refund event ${eventType} for opportunity ${opportunityId} (Refund ID: ${refundEntity?.id || 'unknown'})`,
+        `OUTCOME_VERIFICATION_AUDIT: Recorded ${eventType} for opportunity ${opportunityId} (Entity ID: ${refundEntity?.id || disputeEntity?.id || 'unknown'})`,
       );
       return { success: true, opportunityId };
     }
 
-    // Handle Expired or Cancelled Links/Orders
+    // Handle Official Razorpay Expirations & Cancellations
     if (
       eventType === 'payment_link.expired' ||
       eventType === 'payment_link.cancelled' ||
-      eventType === 'order.expired'
+      eventType === 'invoice.expired' ||
+      eventType === 'qr_code.closed'
     ) {
       const updatedOpp = await this.stateMachineService.transitionState(
         opportunityId,
