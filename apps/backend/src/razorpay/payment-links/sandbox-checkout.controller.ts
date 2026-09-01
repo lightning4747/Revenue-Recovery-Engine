@@ -14,12 +14,15 @@ export class SandboxCheckoutController {
     @Query('ref') refId: string,
     @Query('amount') amountPaise: string,
     @Query('merchant') merchantId: string,
+    @Query('orderId') orderId: string,
     @Res() res: Response,
   ) {
-    const amountRupees = (Number(amountPaise || 0) / 100).toLocaleString('en-IN', {
+    const amountRupees = (Number(amountPaise || 250000) / 100).toLocaleString('en-IN', {
       style: 'currency',
       currency: 'INR',
     });
+
+    const razorpayKey = process.env.RAZORPAY_KEY_ID || 'rzp_test_TVsCTwvJZE0JqB';
 
     const html = `
     <!DOCTYPE html>
@@ -27,7 +30,8 @@ export class SandboxCheckoutController {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Razorpay Test Checkout Sandbox</title>
+      <title>Razorpay Recovery Checkout</title>
+      <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f1f5f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         .card { background: #ffffff; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 440px; padding: 28px; border: 1px solid #e2e8f0; }
@@ -40,18 +44,21 @@ export class SandboxCheckoutController {
         .details { font-size: 13px; color: #475569; margin-bottom: 24px; line-height: 1.6; }
         .details-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #e2e8f0; }
         .btn-group { display: flex; flex-direction: column; gap: 12px; }
-        .btn { padding: 14px; border-radius: 8px; font-weight: 700; font-size: 15px; border: none; cursor: pointer; transition: opacity 0.2s; text-align: center; text-decoration: none; }
+        .btn { padding: 14px; border-radius: 8px; font-weight: 700; font-size: 15px; border: none; cursor: pointer; transition: opacity 0.2s; text-align: center; text-decoration: none; width: 100%; box-sizing: border-box; }
+        .btn-rzp { background: #2160d5; color: #ffffff; box-shadow: 0 4px 12px rgba(33, 96, 213, 0.3); margin-bottom: 12px; }
+        .btn-rzp:hover { opacity: 0.95; }
         .btn-success { background: #068f44; color: #ffffff; box-shadow: 0 4px 12px rgba(6, 143, 68, 0.25); }
         .btn-success:hover { opacity: 0.9; }
         .btn-fail { background: #dc2626; color: #ffffff; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25); }
         .btn-fail:hover { opacity: 0.9; }
         .badge { background: #fef3c7; color: #92400e; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 4px; text-transform: uppercase; margin-left: 6px; }
+        .divider { text-align: center; font-size: 11px; color: #94a3b8; font-weight: 600; margin: 16px 0; text-transform: uppercase; }
       </style>
     </head>
     <body>
       <div class="card">
         <div class="header">
-          <div class="logo">razorpay <span>recovery sandbox</span> <span class="badge">Test Mode</span></div>
+          <div class="logo">razorpay <span>recovery engine</span> <span class="badge">Test Mode</span></div>
         </div>
 
         <div class="amount-box">
@@ -62,22 +69,92 @@ export class SandboxCheckoutController {
         <div class="details">
           <div class="details-row"><span>Opportunity ID:</span> <strong style="font-family: monospace;">${oppId || 'N/A'}</strong></div>
           <div class="details-row"><span>Reference ID:</span> <strong style="font-family: monospace;">${refId || 'N/A'}</strong></div>
+          ${orderId ? `<div class="details-row"><span>Razorpay Order ID:</span> <strong style="font-family: monospace; color: #2160d5;">${orderId}</strong></div>` : ''}
           <div class="details-row"><span>Customer:</span> <strong>idontkniwhudhu@gmail.com</strong></div>
           <div class="details-row"><span>Contact:</span> <strong>+919360220856</strong></div>
         </div>
+
+        ${
+          orderId
+            ? `
+        <button id="rzp-button1" class="btn btn-rzp">⚡ Pay via Official Razorpay Modal</button>
+        <div class="divider">— or simulate local settlement —</div>
+        <script>
+        var options = {
+            "key": "${razorpayKey}",
+            "amount": "${amountPaise || 250000}",
+            "currency": "INR",
+            "name": "Revenue Recovery Engine",
+            "description": "Recovery Settlement for ${oppId || 'Order'}",
+            "order_id": "${orderId}",
+            "handler": function (response){
+                alert("Payment Captured on Razorpay! Payment ID: " + response.razorpay_payment_id);
+                window.location.href = "/api/v1/sandbox/checkout/paid-redirect?opp=${oppId}&paymentId=" + response.razorpay_payment_id;
+            },
+            "prefill": {
+                "name": "Test Customer",
+                "email": "idontkniwhudhu@gmail.com",
+                "contact": "+919360220856"
+            },
+            "theme": {
+                "color": "#2160d5"
+            }
+        };
+        var rzp1 = new Razorpay(options);
+        document.getElementById('rzp-button1').onclick = function(e){
+            rzp1.open();
+            e.preventDefault();
+        }
+        </script>
+        `
+            : ''
+        }
 
         <form action="/api/v1/sandbox/checkout/pay" method="POST" class="btn-group">
           <input type="hidden" name="oppId" value="${oppId}" />
           <input type="hidden" name="refId" value="${refId}" />
           <input type="hidden" name="amount" value="${amountPaise}" />
           <input type="hidden" name="merchantId" value="${merchantId || 'm_default_merchant'}" />
-          <button type="submit" class="btn btn-success">✓ Complete Test Payment (Success)</button>
+          <button type="submit" class="btn btn-success">✓ Complete Test Payment (Local)</button>
         </form>
 
         <form action="/api/v1/sandbox/checkout/fail" method="POST" style="margin-top: 12px;">
           <input type="hidden" name="oppId" value="${oppId}" />
-          <button type="submit" class="btn btn-fail" style="width: 100%;">✗ Simulate Payment Decline (Fail)</button>
+          <button type="submit" class="btn btn-fail">✗ Simulate Payment Decline (Fail)</button>
         </form>
+      </div>
+    </body>
+    </html>
+    `;
+
+    return res.status(200).send(html);
+  }
+
+  @Get('checkout/paid-redirect')
+  renderPaidRedirectPage(@Query('opp') oppId: string, @Query('paymentId') paymentId: string, @Res() res: Response) {
+    const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <title>Payment Successful on Razorpay</title>
+      <style>
+        body { font-family: sans-serif; background: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .box { background: white; padding: 40px; border-radius: 12px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 420px; }
+        .icon { font-size: 48px; color: #068f44; margin-bottom: 16px; }
+        h2 { margin: 0 0 10px 0; color: #0f172a; }
+        p { color: #64748b; font-size: 14px; line-height: 1.5; margin-bottom: 24px; }
+        .btn { background: #2160d5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; }
+        .code { font-family: monospace; background: #f1f5f9; padding: 4px 8px; border-radius: 4px; color: #0f172a; }
+      </style>
+    </head>
+    <body>
+      <div class="box">
+        <div class="icon">✓</div>
+        <h2>Payment Captured on Razorpay!</h2>
+        <p>Razorpay Payment ID: <span class="code">${paymentId}</span></p>
+        <p>The order status has been updated to <strong>PAID</strong> on Razorpay's Dashboard, and a live webhook has been fired to your engine!</p>
+        <a href="http://localhost:5173" class="btn">Return to Local Dashboard</a>
       </div>
     </body>
     </html>
